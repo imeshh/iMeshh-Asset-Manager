@@ -837,7 +837,6 @@ class Singleton_updater(object):
         outdir = os.path.join(self._updater_path, "source")
         try:
             shutil.rmtree(outdir)
-            os.makedirs(outdir)
             if self._verbose:
                 print("Source folder cleared and recreated")
         except:
@@ -846,7 +845,7 @@ class Singleton_updater(object):
         # Create parent directories if needed, would not be relevant unless
         # installing addon into another location or via an addon manager
         try:
-            os.mkdir(outdir)
+            os.makedirs(outdir)
         except Exception as err:
             print("Error occurred while making extract dir:")
             print(str(err))

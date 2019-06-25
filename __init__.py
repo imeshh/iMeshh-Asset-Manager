@@ -19,6 +19,7 @@ bl_info = {
     "category": "Assets Management"
 }
 
+
 # Make folders for storing assets
 def make_folders(root):
     folders = {
@@ -38,7 +39,8 @@ def make_folders(root):
         'Seating': ['Stools', 'Lounge Chairs', 'Sofas', 'Benches', 'Chairs'],
         'Storage': ['Book Shelves', 'Dressers', 'TV Units', 'Wardrobes'],
         'Tables': ['Coffee Tables', 'Dining Tables', 'Office Desks', 'Side Tables'],
-        'Materials': ['Brick', 'Concrete', 'Fabrics', 'Ground', 'HDRI', 'Leather', 'Worktops', 'Metal', 'Paint', 'Plaster', 'Plastic', 'Stone', 'Tiles', 'Wood', 'Wood Floors']
+        'Materials': ['Brick', 'Concrete', 'Fabrics', 'Ground', 'HDRI', 'Leather', 'Worktops', 'Metal', 'Paint',
+                      'Plaster', 'Plastic', 'Stone', 'Tiles', 'Wood', 'Wood Floors']
     }
 
     if not os.path.exists(root):
@@ -54,20 +56,22 @@ def make_folders(root):
             if not os.path.exists(path1):
                 os.mkdir(path1)
 
+
 class KAM_PrefPanel(bpy.types.AddonPreferences):
     bl_idname = __name__
 
     asset_dir = StringProperty(
-                            name="Assets Path",
-                            default=os.path.join(os.path.dirname(__file__), 'Assets'),
-                            description="Show only hotkeys that have this text in their name",
-                            subtype="DIR_PATH")
+        name="Assets Path",
+        default=os.path.join(os.path.dirname(__file__), 'Assets'),
+        description="Show only hotkeys that have this text in their name",
+        subtype="DIR_PATH")
 
     def draw(self, context):
         layout = self.layout
         row = layout.row()
         row.prop(self, "asset_dir", text='Assets path')
         row.operator("asset_manager.make_folder", icon="PROP_CON")
+
 
 class KAM_MakeFolder(bpy.types.Operator):
     bl_idname = "asset_manager.make_folder"
@@ -77,7 +81,8 @@ class KAM_MakeFolder(bpy.types.Operator):
     def execute(self, context):
         root = get_root_dir(context)
         make_folders(root)
-        return{'FINISHED'}
+        return {'FINISHED'}
+
 
 # Panel for menu on the right
 class KAM_Panel(bpy.types.Panel):
@@ -92,6 +97,7 @@ class KAM_Panel(bpy.types.Panel):
     def draw(self, context):
         KAM_UI(self, context)
 
+
 # Operator for popup dialog in panel
 class KAM_Popup(bpy.types.Operator):
     """Acces to your Objects Library"""
@@ -101,6 +107,7 @@ class KAM_Popup(bpy.types.Operator):
 
     def execute(self, context):
         return {'FINISHED'}
+
 
 # Draw the dialog
 def KAM_UI(self, context):
@@ -143,6 +150,7 @@ def get_root_dir(context=None):
 
     return pref.asset_dir
 
+
 def category_items(self, context):
     categories = []
     index = 1
@@ -159,9 +167,11 @@ def category_items(self, context):
 
     return categories
 
+
 # Update category list
 def update_category(self, context):
     scan_directory(self, context)
+
 
 # Fill out sub categories.
 def subcategory_items(self, context):
@@ -181,6 +191,7 @@ def subcategory_items(self, context):
 
     return subcategories
 
+
 # PropertyGroup for this asset manager
 class KrisAssetManager(bpy.types.PropertyGroup):
     cat = EnumProperty(
@@ -199,6 +210,7 @@ class KrisAssetManager(bpy.types.PropertyGroup):
         items=[('cycles', 'Cycles', '', 0), ('corona', 'Corona', '', 1)],
         name="Blend",
         description="Select blend")
+
 
 # EnumProperty(asset_manager_prevs) Callback
 def scan_directory(self, context):
@@ -242,6 +254,7 @@ def scan_directory(self, context):
 
     return enum_items
 
+
 # Scan for images and blend file (.blend)
 def scan_for_elements(directory, enum_items, pcoll):
     image_paths = []
@@ -269,6 +282,7 @@ def scan_for_elements(directory, enum_items, pcoll):
                 break
 
     return enum_items
+
 
 # Scan for images and blend file (.blend)
 def scan_for_elements_root(root, enum_items, pcoll):
@@ -303,6 +317,7 @@ def scan_for_elements_root(root, enum_items, pcoll):
 
     return enum_items
 
+
 # Import button
 class KAM_ImportObjectButton(bpy.types.Operator):
     bl_idname = "asset_manager.import_object"
@@ -311,7 +326,8 @@ class KAM_ImportObjectButton(bpy.types.Operator):
 
     def execute(self, context):
         import_object(context, link=False)
-        return{'FINISHED'}
+        return {'FINISHED'}
+
 
 # Import button
 class KAM_ImportMaterialButton(bpy.types.Operator):
@@ -321,7 +337,8 @@ class KAM_ImportMaterialButton(bpy.types.Operator):
 
     def execute(self, context):
         import_material(context, link=False)
-        return{'FINISHED'}
+        return {'FINISHED'}
+
 
 # Import button
 class KAM_LinkToButton(bpy.types.Operator):
@@ -331,7 +348,8 @@ class KAM_LinkToButton(bpy.types.Operator):
 
     def execute(self, context):
         webbrowser.open('https://imeshh.com/')
-        return{'FINISHED'}
+        return {'FINISHED'}
+
 
 def select(obj):
     if bpy.app.version < (2, 80, 0):
@@ -339,17 +357,20 @@ def select(obj):
     else:
         obj.select_set(True)
 
+
 def deselect(obj):
     if bpy.app.version < (2, 80, 0):
         obj.select = False
     else:
         obj.select_set(False)
 
+
 def get_data_colls():
     if hasattr(bpy.data, "collections"):
         return bpy.data.collections
     elif hasattr(bpy.data, "groups"):
         return bpy.data.groups
+
 
 # Import objects into current scene.
 def import_object(context, link):
@@ -386,7 +407,8 @@ def import_object(context, link):
 
         append_blend(blend, link)
 
-    # context.view_layer.active_layer_collection = active_layer
+        # context.view_layer.active_layer_collection = active_layer
+
 
 # Import blend file
 def append_blend(blendFile, link=False):
@@ -439,6 +461,7 @@ def append_blend(blendFile, link=False):
         for obj in objects:
             select(obj)
 
+
 # Import objects into current scene.
 def import_material(context, link):
     active_ob = context.active_object
@@ -467,6 +490,7 @@ def import_material(context, link):
             active_ob.data.materials.append(mat)
             select(active_ob)
 
+
 preview_collections = {}
 
 # Classes to register
@@ -480,6 +504,7 @@ classes = (
     KAM_LinkToButton,
     KrisAssetManager,
 )
+
 
 # Register classes and ...
 def register():
@@ -499,6 +524,7 @@ def register():
 
     preview_collections["main"] = pcoll
     bpy.types.Scene.asset_manager = PointerProperty(type=KrisAssetManager)
+
 
 # Unregister
 def unregister():

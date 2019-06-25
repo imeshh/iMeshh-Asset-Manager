@@ -64,11 +64,47 @@ class KAM_PrefPanel(bpy.types.AddonPreferences):
         description="Show only hotkeys that have this text in their name",
         subtype="DIR_PATH")
 
+    # addon updater preferences
+    auto_check_update = bpy.props.BoolProperty(
+        name="Auto-check for Update",
+        description="If enabled, auto-check for updates using an interval",
+        default=False,
+    )
+
+    updater_intrval_months = bpy.props.IntProperty(
+        name='Months',
+        description="Number of months between checking for updates",
+        default=0,
+        min=0
+    )
+    updater_intrval_days = bpy.props.IntProperty(
+        name='Days',
+        description="Number of days between checking for updates",
+        default=7,
+        min=0,
+    )
+    updater_intrval_hours = bpy.props.IntProperty(
+        name='Hours',
+        description="Number of hours between checking for updates",
+        default=0,
+        min=0,
+        max=23
+    )
+    updater_intrval_minutes = bpy.props.IntProperty(
+        name='Minutes',
+        description="Number of minutes between checking for updates",
+        default=0,
+        min=0,
+        max=59
+    )
+
     def draw(self, context):
         layout = self.layout
         row = layout.row()
         row.prop(self, "asset_dir", text='Assets path')
         row.operator("asset_manager.make_folder", icon="PROP_CON")
+
+        addon_updater_ops.update_settings_ui(self, context)
 
 
 class KAM_MakeFolder(bpy.types.Operator):
@@ -506,6 +542,9 @@ classes = (
 
 # Register classes and ...
 def register():
+    # Initialize addon updater
+    addon_updater_ops.register(bl_info)
+
     for cls in classes:
         bpy.utils.register_class(cls)
 
@@ -522,9 +561,6 @@ def register():
 
     preview_collections["main"] = pcoll
     bpy.types.Scene.asset_manager = PointerProperty(type=KrisAssetManager)
-
-    # Initialize addon updater
-    addon_updater_ops.register(bl_info)
 
 
 # Unregister

@@ -59,7 +59,7 @@ except Exception as e:
 # Must declare this before classes are loaded
 # otherwise the bl_idname's will not match and have errors.
 # Must be all lowercase and no spaces
-updater.addon = "addon_updater_demo"
+updater.addon = "imeshh_asset_manager"
 
 
 # -----------------------------------------------------------------------------
@@ -1285,7 +1285,7 @@ def register(bl_info):
     # updater.addon = # define at top of module, MUST be done first
 
     # Website for manual addon download, optional but recommended to set
-    updater.website = "https://github.com/CGCookie/blender-addon-updater/"
+    updater.website = "https://bitbucket.com/imeshh/imeshh-asset-manager"
 
     # Addon subfolder path
     # "sample/path/to/addon"

@@ -1,0 +1,3 @@
+Licence information can be found here https://choosealicense.com/licenses/apache-2.0/
+
+Originally modified from Dawid Huczynski's Simple Asset Manager to work with our own workflow and product download formats

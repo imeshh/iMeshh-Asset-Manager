@@ -1,12 +1,8 @@
 from bpy.types import WindowManager
 import bpy.utils.previews
-from bpy.props import BoolProperty, PointerProperty, StringProperty, EnumProperty
+from bpy.props import PointerProperty, StringProperty, EnumProperty
 import bpy
-import bmesh
 import os
-import subprocess
-from math import pi, cos, sin, radians
-from mathutils import Euler
 import webbrowser
 
 bl_info = {

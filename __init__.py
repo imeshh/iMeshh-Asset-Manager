@@ -445,10 +445,10 @@ def import_object(context, link):
 
 
 # Import blend file
-def append_blend(blendFile, link=False):
+def append_blend(blend_file, link=False):
     asset_coll = get_data_colls()['Assets']
 
-    coll_name = os.path.splitext(os.path.basename(blendFile))[0].title()
+    coll_name = os.path.splitext(os.path.basename(blend_file))[0].title()
     obj_coll = get_data_colls().new(coll_name)
 
     if bpy.app.version < (2, 80, 0):
@@ -458,14 +458,14 @@ def append_blend(blendFile, link=False):
         asset_coll.children.link(obj_coll)
 
     objects = []
-    if blendFile.endswith('.blend'):
+    if blend_file.endswith('.blend'):
         scenes = []
-        with bpy.data.libraries.load(blendFile) as (data_from, data_to):
+        with bpy.data.libraries.load(blend_file) as (data_from, data_to):
             for name in data_from.scenes:
                 scenes.append({'name': name})
 
         action = bpy.ops.wm.link if link else bpy.ops.wm.append
-        action(directory=blendFile + "/Scene/", files=scenes)
+        action(directory=blend_file + "/Scene/", files=scenes)
 
         scenes = bpy.data.scenes[-len(scenes):]
         for scene in scenes:
@@ -505,7 +505,7 @@ def import_material(context, link):
     bpy.ops.object.select_all(action='DESELECT')
 
     selected_preview = wm.asset_manager_prevs
-    if selected_preview not in ('empty'):
+    if selected_preview not in 'empty':
         if context.scene.asset_manager.blend == 'corona':
             blend = selected_preview.replace('Cycles', 'Corona')
         else:
@@ -518,7 +518,7 @@ def import_material(context, link):
     action = bpy.ops.wm.link if link else bpy.ops.wm.append
     action(directory=blend + "/Material/", files=files)
 
-    if active_ob != None:
+    if active_ob is not None:
         for file in files:
             mat = bpy.data.materials[file['name']]
             active_ob.data.materials.append(mat)

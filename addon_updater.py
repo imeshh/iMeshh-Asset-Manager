@@ -772,6 +772,8 @@ class Singleton_updater(object):
                                 os.pardir,
                                 self._addon + "_updater_backup_temp")
 
+        tempdest = os.path.normpath(tempdest)
+
         if self._verbose: print("Backup destination path: ", local)
 
         if os.path.isdir(local):
@@ -1235,9 +1237,9 @@ class Singleton_updater(object):
                 return (True, new_version, link)
             else:
                 raise ValueError("include_branch_autocheck: NOT YET DEVELOPED")
-            # bypass releases and look at timestamp of last update
-            # from a branch compared to now, see if commit values
-            # match or not.
+                # bypass releases and look at timestamp of last update
+                # from a branch compared to now, see if commit values
+                # match or not.
 
         else:
             # situation where branches not included
@@ -1371,7 +1373,7 @@ class Singleton_updater(object):
             res = self.unpack_staged_zip(clean)
             if res < 0:
                 return res
-            # would need to compare against other versions held in tags
+                # would need to compare against other versions held in tags
 
         # run the front-end's callback if provided
         if callback:

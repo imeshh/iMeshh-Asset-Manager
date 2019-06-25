@@ -565,6 +565,8 @@ def register():
 
 # Unregister
 def unregister():
+    addon_updater_ops.unregister()
+
     del WindowManager.asset_manager_prevs
 
     for pcoll in preview_collections.values():

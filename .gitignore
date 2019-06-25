@@ -1,2 +1,3 @@
 *.py
 imeshhassetmanager_updater/
+__pycache__/

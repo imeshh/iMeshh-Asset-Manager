@@ -5,6 +5,8 @@ import bpy
 import os
 import webbrowser
 
+from . import addon_updater_ops
+
 bl_info = {
     "name": "iMeshh Asset Manager",
     "version": (0, 1),
@@ -520,6 +522,9 @@ def register():
 
     preview_collections["main"] = pcoll
     bpy.types.Scene.asset_manager = PointerProperty(type=KrisAssetManager)
+
+    # Initialize addon updater
+    addon_updater_ops.register(bl_info)
 
 
 # Unregister

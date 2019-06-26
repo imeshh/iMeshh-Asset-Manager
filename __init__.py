@@ -209,8 +209,8 @@ def update_category(self, context):
 
 # Fill out sub categories.
 def subcategory_items(self, context):
-    subcategories = []
-    index = 0
+    subcategories = [('All', 'All', '', 0)]
+    index = 1
     root_dir = get_root_dir(context)
 
     if self.cat == 'All':
@@ -269,6 +269,8 @@ def scan_directory(self, context):
 
     if category == 'All':
         enum_items = scan_for_elements_root(root_dir, enum_items, pcoll)
+    elif subcategory == 'All':
+        enum_items = scan_for_elements_category(os.path.join(root_dir, category), enum_items, pcoll)
     elif directory and os.path.exists(directory):
         enum_items = scan_for_elements(directory, enum_items, pcoll)
 
@@ -317,6 +319,12 @@ def scan_for_elements(directory, enum_items, pcoll):
 
     return enum_items
 
+
+# Scan all subcategories inside a category
+def scan_for_elements_category(directory, enum_items, pcoll):
+    for subcategory in os.listdir(directory):
+        scan_for_elements(os.path.join(directory, subcategory), enum_items, pcoll)
+    return enum_items
 
 # Scan for images and blend file (.blend)
 def scan_for_elements_root(root, enum_items, pcoll):

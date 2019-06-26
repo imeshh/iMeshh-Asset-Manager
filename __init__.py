@@ -10,7 +10,7 @@ from . import addon_updater_ops
 
 bl_info = {
     "name": "iMeshh Asset Manager",
-    "version": (0, 1, 9),
+    "version": (0, 1, 10),
     "blender": (2, 80, 0),
     "location": "View3D > TOOLS > iMeshh",
     "author": "iMeshh",

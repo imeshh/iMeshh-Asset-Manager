@@ -3,6 +3,7 @@ import bpy.utils.previews
 from bpy.props import PointerProperty, StringProperty, EnumProperty
 import bpy
 import os
+import subprocess
 import webbrowser
 
 from . import addon_updater_ops
@@ -143,6 +144,40 @@ class KAM_Popup(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class KAM_OpenThumbnail(bpy.types.Operator):
+    """Open the thumbnail image"""
+    bl_idname = "asset_manager.open_thumbnail"
+    bl_label = "Open Thumbnail"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        selected_blend = bpy.data.window_managers["WinMan"].asset_manager_prevs
+
+        for (blend_path, _, file_blend, icon_id, _) in preview_collections['main'].asset_manager_prevs:
+            print(blend_path, file_blend, icon_id)
+            if blend_path == selected_blend:
+                for (preview_path, preview_image) in preview_collections['main'].items():
+                    print('>>>', preview_path, preview_image.icon_id)
+                    if preview_image.icon_id == icon_id:
+                        os.startfile(preview_path)
+
+        return {'FINISHED'}
+
+
+class KAM_OpenBlend(bpy.types.Operator):
+    """Open the .blend file for the asset"""
+    bl_idname = "asset_manager.open_blend"
+    bl_label = "Open Thumbnail"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        selected_blend = bpy.data.window_managers["WinMan"].asset_manager_prevs
+
+        subprocess.Popen([bpy.app.binary_path, selected_blend])
+
+        return {'FINISHED'}
+
+
 # Draw the dialog
 def KAM_UI(self, context):
     layout = self.layout
@@ -161,6 +196,10 @@ def KAM_UI(self, context):
     if len(wm.asset_manager_prevs) != 0:
         row = layout.row()
         row.template_icon_view(wm, "asset_manager_prevs", show_labels=True)
+
+        row = layout.row(align=True)
+        row.operator("asset_manager.open_thumbnail", icon="FILE_IMAGE")
+        row.operator("asset_manager.open_blend", icon="FILE_BLEND")
 
         row = layout.row()
         row.prop(manager, "blend", expand=True)
@@ -541,6 +580,8 @@ classes = (
     KAM_MakeFolder,
     KAM_Panel,
     KAM_Popup,
+    KAM_OpenBlend,
+    KAM_OpenThumbnail,
     KAM_ImportObjectButton,
     KAM_ImportMaterialButton,
     KAM_LinkToButton,

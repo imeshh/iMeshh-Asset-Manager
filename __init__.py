@@ -11,7 +11,7 @@ from . import addon_updater_ops
 
 bl_info = {
     "name": "iMeshh Asset Manager",
-    "version": (0, 1, 12),
+    "version": (0, 1, 13),
     "blender": (2, 80, 0),
     "location": "View3D > TOOLS > iMeshh",
     "author": "iMeshh",
@@ -179,7 +179,8 @@ class KAM_OpenBlend(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        selected_blend = bpy.data.window_managers["WinMan"].asset_manager_prevs
+        selected_blend = get_selected_blend(context)
+
         open_blend(bpy.app.binary_path, selected_blend)
         return {'FINISHED'}
 
@@ -459,6 +460,15 @@ def get_data_colls():
         return bpy.data.groups
 
 
+def get_selected_blend(context):
+    selected_preview = bpy.data.window_managers["WinMan"].asset_manager_prevs
+    if selected_preview != 'no blend':
+        if context.scene.asset_manager.blend == 'corona':
+            return selected_preview.replace('Cycles', 'Corona')
+        else:
+            return selected_preview.replace('Corona', 'Cycles')
+
+
 # Import objects into current scene.
 def import_object(context, link):
     # active_layer = context.view_layer.active_layer_collection
@@ -467,9 +477,6 @@ def import_object(context, link):
         deselect(ob)
 
     bpy.ops.object.select_all(action='DESELECT')
-
-    selected_preview = bpy.data.window_managers["WinMan"].asset_manager_prevs
-    folder = os.path.split(os.path.split(selected_preview)[0])[1]
 
     # 2.79 and 2.80 killing me.
     if bpy.app.version < (2, 80, 0):
@@ -486,12 +493,9 @@ def import_object(context, link):
         else:
             asset_coll = bpy.data.collections['Assets']
 
-    if selected_preview != 'no blend':
-        if context.scene.asset_manager.blend == 'corona':
-            blend = selected_preview.replace('Cycles', 'Corona')
-        else:
-            blend = selected_preview.replace('Corona', 'Cycles')
+    blend = get_selected_blend(context)
 
+    if blend:
         append_blend(blend, link)
 
         # context.view_layer.active_layer_collection = active_layer
@@ -552,18 +556,11 @@ def append_blend(blend_file, link=False):
 # Import objects into current scene.
 def import_material(context, link):
     active_ob = context.active_object
-    wm = bpy.data.window_managers["WinMan"]
     for ob in bpy.context.scene.objects:
         deselect(ob)
     bpy.ops.object.select_all(action='DESELECT')
 
-    selected_preview = wm.asset_manager_prevs
-    if selected_preview not in 'empty':
-        if context.scene.asset_manager.blend == 'corona':
-            blend = selected_preview.replace('Cycles', 'Corona')
-        else:
-            blend = selected_preview.replace('Corona', 'Cycles')
-
+    blend = get_selected_blend(context)
     files = []
     with bpy.data.libraries.load(blend) as (data_from, data_to):
         for name in data_from.materials:

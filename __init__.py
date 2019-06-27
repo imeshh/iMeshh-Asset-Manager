@@ -157,9 +157,8 @@ class KAM_OpenThumbnail(bpy.types.Operator):
             print(blend_path, file_blend, icon_id)
             if blend_path == selected_blend:
                 for (preview_path, preview_image) in preview_collections['main'].items():
-                    print('>>>', preview_path, preview_image.icon_id)
                     if preview_image.icon_id == icon_id:
-                        os.startfile(preview_path)
+                        webbrowser.open(preview_path)
 
         return {'FINISHED'}
 

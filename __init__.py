@@ -3,6 +3,7 @@ import bpy.utils.previews
 from bpy.props import PointerProperty, StringProperty, EnumProperty
 import bpy
 import os
+import sys
 import subprocess
 import webbrowser
 
@@ -163,6 +164,14 @@ class KAM_OpenThumbnail(bpy.types.Operator):
         return {'FINISHED'}
 
 
+def open_blend(binary, filepath):
+    if sys.platform.startswith("win"):
+        base, exe = os.path.split(binary)
+        subprocess.Popen(["start", base, exe, filepath], shell=True)
+    else:
+        subprocess.Popen([binary, filepath])
+
+
 class KAM_OpenBlend(bpy.types.Operator):
     """Open the .blend file for the asset"""
     bl_idname = "asset_manager.open_blend"
@@ -171,9 +180,7 @@ class KAM_OpenBlend(bpy.types.Operator):
 
     def execute(self, context):
         selected_blend = bpy.data.window_managers["WinMan"].asset_manager_prevs
-
-        subprocess.Popen([bpy.app.binary_path, selected_blend])
-
+        open_blend(bpy.app.binary_path, selected_blend)
         return {'FINISHED'}
 
 

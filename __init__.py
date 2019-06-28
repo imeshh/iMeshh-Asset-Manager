@@ -167,7 +167,7 @@ class KAM_OpenThumbnail(bpy.types.Operator):
 def open_blend(binary, filepath):
     if sys.platform.startswith("win"):
         base, exe = os.path.split(binary)
-        subprocess.Popen(["start", base, exe, filepath], shell=True)
+        subprocess.Popen(["start", "/d", base, exe, filepath], shell=True)
     else:
         subprocess.Popen([binary, filepath])
 

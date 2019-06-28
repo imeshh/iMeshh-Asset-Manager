@@ -339,9 +339,6 @@ def scan_directory(self, context):
 
 # Scan for images and blend file (.blend)
 def scan_for_elements(directory, enum_items, pcoll):
-    image_paths = []
-    i = 0
-
     for item in os.listdir(directory):
         item_path = os.path.join(directory, item)
         file_blend = "no blend"
@@ -355,12 +352,10 @@ def scan_for_elements(directory, enum_items, pcoll):
                 img_path = os.path.join(item_path, file)
                 blend_path = os.path.join(item_path, file_blend)
                 if img_path in pcoll:
-                    enum_items.append((blend_path, item, file_blend, pcoll[img_path].icon_id, i))
+                    enum_items.append((blend_path, item, file_blend, pcoll[img_path].icon_id, len(enum_items)))
                 else:
                     thumb = pcoll.load(img_path, img_path, 'IMAGE')
-                    enum_items.append((blend_path, item, file_blend, thumb.icon_id, i))
-
-                i = i + 1
+                    enum_items.append((blend_path, item, file_blend, thumb.icon_id, len(enum_items)))
                 break
 
     return enum_items

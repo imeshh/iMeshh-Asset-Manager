@@ -477,6 +477,8 @@ class KAM_ImportHDR(bpy.types.Operator):
     def execute(self, context):
         if context.scene.asset_manager.blend == 'cycles':
             import_hdr_cycles(context)
+        else:
+            import_hdr_corona(context)
         
         return {'FINISHED'}
 
@@ -690,6 +692,21 @@ def import_hdr_cycles(context):
 
     # Set the environment rotation
     node_mapping.rotation.z = manager.hdr_rotation
+
+
+def import_hdr_corona(context):
+    hdr = get_selected_hdr(context)
+
+    if not hdr:
+        return
+
+    corona = context.scene.world.corona
+    manager = context.scene.asset_manager
+
+    corona.mode = 'latlong'
+    corona.enviro_tex = hdr
+    corona.map_gi.intensity = manager.hdr_strength
+    corona.latlong_rotate_z = manager.hdr_rotation
 
 
 preview_collections = {}

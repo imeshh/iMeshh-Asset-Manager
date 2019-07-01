@@ -1,6 +1,6 @@
 from bpy.types import WindowManager
 import bpy.utils.previews
-from bpy.props import PointerProperty, StringProperty, EnumProperty
+from bpy.props import PointerProperty, StringProperty, EnumProperty, FloatProperty
 import bpy
 import os
 import sys
@@ -178,6 +178,10 @@ class KAM_OpenBlend(bpy.types.Operator):
     bl_label = "Open Thumbnail"
     bl_options = {'REGISTER', 'UNDO'}
 
+    @classmethod
+    def poll(cls, context):
+        return bool(get_selected_blend(context))
+
     def execute(self, context):
         selected_blend = get_selected_blend(context)
 
@@ -211,11 +215,21 @@ def KAM_UI(self, context):
         row = layout.row()
         row.prop(manager, "blend", expand=True)
 
-        row = layout.row()
-        row.operator("asset_manager.import_object", icon='APPEND_BLEND')
+        if get_selected_blend(context):
+            row = layout.row()
+            row.operator("asset_manager.import_object", icon='APPEND_BLEND')
 
-        row = layout.row()
-        row.operator("asset_manager.import_material", icon='TEXTURE_DATA')
+            row = layout.row()
+            row.operator("asset_manager.import_material", icon='TEXTURE_DATA')
+        elif get_selected_hdr(context):
+            row = layout.row()
+            row.operator("asset_manager.import_hdr", icon='TEXTURE_DATA')
+
+            row = layout.row()
+            row.prop(manager, "hdr_strength")
+
+            row = layout.row()
+            row.prop(manager, "hdr_rotation")
 
 
 # Get root directory from user preferences
@@ -291,6 +305,22 @@ class KrisAssetManager(bpy.types.PropertyGroup):
         name="Blend",
         description="Select blend")
 
+    # HDR properties
+    hdr_strength = FloatProperty(
+        default=1,
+        soft_max=1,
+        soft_min=0,
+        name="Sky Strength",
+        description="The strength of the HDR environment"
+    )
+
+    hdr_rotation = FloatProperty(
+        default=0,
+        subtype="ANGLE",
+        name="Environment Angle",
+        description="Rotate the HDR environment to this angle"
+    )
+
 
 # EnumProperty(asset_manager_prevs) Callback
 def scan_directory(self, context):
@@ -337,18 +367,37 @@ def scan_directory(self, context):
     return enum_items
 
 
+def is_hdr(file):
+    return file.lower().endswith(('.hdr', '.hdr'))
+
+
+def is_blend(file):
+    return file.lower().endswith(('.blend',))
+
+
+def is_image(file):
+    return file.lower().endswith(('.png', '.jpg'))
+
+
+def find_blend_in_path(path):
+    file_name = "no blend"
+    for file in os.listdir(path):
+        if is_blend(file):
+            file_name = file
+            break
+        elif is_hdr(file) and file_name == 'no blend':
+            file_name = file
+    return file_name
+
+
 # Scan for images and blend file (.blend)
 def scan_for_elements(directory, enum_items, pcoll):
     for item in os.listdir(directory):
         item_path = os.path.join(directory, item)
-        file_blend = "no blend"
-        for file in os.listdir(item_path):
-            # Find blend file (.blend)
-            if file.lower().endswith(('.blend',)):
-                file_blend = file
+        file_blend = find_blend_in_path(item_path)
 
         for file in os.listdir(item_path):
-            if file.lower().endswith(('.png', '.jpg')):
+            if is_image(file):
                 img_path = os.path.join(item_path, file)
                 blend_path = os.path.join(item_path, file_blend)
                 if img_path in pcoll:
@@ -379,14 +428,10 @@ def scan_for_elements_root(root, enum_items, pcoll):
             for item in os.listdir(subcat_path):
                 item_path = os.path.join(subcat_path, item)
 
-                file_blend = "no blend"
-                for file in os.listdir(item_path):
-                    # Find blend file (.blend)
-                    if file.lower().endswith(('.blend',)):
-                        file_blend = file
+                file_blend = find_blend_in_path(item_path)
 
                 for file in os.listdir(item_path):
-                    if file.lower().endswith(('.png', '.jpg')):
+                    if is_image(file):
                         img_path = os.path.join(item_path, file)
                         blend_path = os.path.join(item_path, file_blend)
                         if img_path in pcoll:
@@ -424,6 +469,19 @@ class KAM_ImportMaterialButton(bpy.types.Operator):
 
 
 # Import button
+class KAM_ImportHDR(bpy.types.Operator):
+    bl_idname = "asset_manager.import_hdr"
+    bl_label = "Import HDR"
+    bl_description = "Imports an HDR into the world material"
+
+    def execute(self, context):
+        if context.scene.asset_manager.blend == 'cycles':
+            import_hdr_cycles(context)
+        
+        return {'FINISHED'}
+
+
+# Import button
 class KAM_LinkToButton(bpy.types.Operator):
     bl_idname = "asset_manager.link_to"
     bl_label = "Go to iMeshh"
@@ -455,13 +513,25 @@ def get_data_colls():
         return bpy.data.groups
 
 
+# Get the selected file (either a blend or an HDR)
+def get_selected_file(context):
+    return bpy.data.window_managers["WinMan"].asset_manager_prevs
+
+
 def get_selected_blend(context):
-    selected_preview = bpy.data.window_managers["WinMan"].asset_manager_prevs
-    if selected_preview != 'no blend':
+    file = get_selected_file(context)
+
+    if is_blend(file):
         if context.scene.asset_manager.blend == 'corona':
-            return selected_preview.replace('Cycles', 'Corona')
+            return file.replace('Cycles', 'Corona')
         else:
-            return selected_preview.replace('Corona', 'Cycles')
+            return file.replace('Corona', 'Cycles')
+
+
+def get_selected_hdr(context):
+    file = get_selected_file(context)
+    if is_hdr(file):
+        return file
 
 
 # Import objects into current scene.
@@ -510,7 +580,7 @@ def append_blend(blend_file, link=False):
         asset_coll.children.link(obj_coll)
 
     objects = []
-    if blend_file.endswith('.blend'):
+    if is_blend(blend_file):
         scenes = []
         with bpy.data.libraries.load(blend_file) as (data_from, data_to):
             for name in data_from.scenes:
@@ -570,6 +640,58 @@ def import_material(context, link):
             select(active_ob)
 
 
+def import_hdr_cycles(context):
+    hdr = get_selected_hdr(context)
+
+    if not hdr:
+        return
+
+    scene = context.scene
+    world = scene.world
+    world.use_nodes = True
+    node_tree = world.node_tree
+
+    # Start from a clean slate
+    node_tree.nodes.clear()
+
+    node_output = node_tree.nodes.new("ShaderNodeOutputWorld")
+    node_background = node_tree.nodes.new("ShaderNodeBackground")
+    node_image_tex = node_tree.nodes.new("ShaderNodeTexImage")
+    node_mapping = node_tree.nodes.new("ShaderNodeMapping")
+    node_tex_coord = node_tree.nodes.new("ShaderNodeTexCoord")
+
+    nodes = [
+        node_output,
+        node_background,
+        node_image_tex,
+        node_mapping,
+        node_tex_coord
+    ]
+    x = 600
+
+    for i, node in enumerate(nodes):
+        x -= nodes[i].width
+        x -= 80
+        node.location.x += x
+
+    node_tree.links.new(node_tex_coord.outputs['Generated'], node_mapping.inputs["Vector"])
+    node_tree.links.new(node_mapping.outputs["Vector"], node_image_tex.inputs["Vector"])
+    node_tree.links.new(node_image_tex.outputs["Color"], node_background.inputs["Color"])
+    node_tree.links.new(node_background.outputs["Background"], node_output.inputs["Surface"])
+
+    # Load in the HDR
+    hdr_image = bpy.data.images.load(hdr)
+    node_image_tex.image = hdr_image
+
+    manager = context.scene.asset_manager
+
+    # Set the strength
+    node_background.inputs['Strength'].default_value = manager.hdr_strength
+
+    # Set the environment rotation
+    node_mapping.rotation.z = manager.hdr_rotation
+
+
 preview_collections = {}
 
 # Classes to register
@@ -580,6 +702,7 @@ classes = (
     KAM_Popup,
     KAM_OpenBlend,
     KAM_OpenThumbnail,
+    KAM_ImportHDR,
     KAM_ImportObjectButton,
     KAM_ImportMaterialButton,
     KAM_LinkToButton,

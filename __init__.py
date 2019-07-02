@@ -20,6 +20,9 @@ bl_info = {
 }
 
 
+HDRI_NODE_TAG = 'iMeshhHDRINode'
+
+
 # Make folders for storing assets
 def make_folders(root):
     folders = {
@@ -287,6 +290,30 @@ def subcategory_items(self, context):
     return subcategories
 
 
+def hdr_strength_update(self, context):
+    manager = context.scene.asset_manager
+
+    if manager.blend == 'cycles':
+        for node in context.scene.world.node_tree.nodes:
+            if node.get(HDRI_NODE_TAG) and node.bl_idname == "ShaderNodeBackground":
+                update_hdri_strength_cycles(node, self.hdr_strength)
+    else:
+        corona = context.scene.world.corona
+        update_hdri_strength_corona(corona, self.hdr_strength)
+
+
+def hdr_rotation_update(self, context):
+    manager = context.scene.asset_manager
+
+    if manager.blend == 'cycles':
+        for node in context.scene.world.node_tree.nodes:
+            if node.get(HDRI_NODE_TAG) and node.bl_idname == "ShaderNodeMapping":
+                update_hdri_rotation_cycles(node, self.hdr_rotation)
+    else:
+        corona = context.scene.world.corona
+        update_hdri_rotation_corona(corona, self.hdr_rotation)
+
+
 # PropertyGroup for this asset manager
 class KrisAssetManager(bpy.types.PropertyGroup):
     cat = EnumProperty(
@@ -312,14 +339,16 @@ class KrisAssetManager(bpy.types.PropertyGroup):
         soft_max=1,
         soft_min=0,
         name="Sky Strength",
-        description="The strength of the HDR environment"
+        description="The strength of the HDR environment",
+        update=hdr_strength_update
     )
 
     hdr_rotation = FloatProperty(
         default=0,
         subtype="ANGLE",
         name="Environment Angle",
-        description="Rotate the HDR environment to this angle"
+        description="Rotate the HDR environment to this angle",
+        update=hdr_rotation_update
     )
 
 
@@ -682,6 +711,9 @@ def import_hdr_cycles(context):
     node_mapping = node_tree.nodes.new("ShaderNodeMapping")
     node_tex_coord = node_tree.nodes.new("ShaderNodeTexCoord")
 
+    node_mapping[HDRI_NODE_TAG] = True
+    node_background[HDRI_NODE_TAG] = True
+
     nodes = [
         node_output,
         node_background,
@@ -708,10 +740,18 @@ def import_hdr_cycles(context):
     manager = context.scene.asset_manager
 
     # Set the strength
-    node_background.inputs['Strength'].default_value = manager.hdr_strength
+    update_hdri_strength_cycles(node_background, manager.hdr_strength)
 
     # Set the environment rotation
-    node_mapping.rotation.z = manager.hdr_rotation
+    update_hdri_rotation_cycles(node_mapping, manager.hdr_rotation)
+
+
+def update_hdri_strength_cycles(node, strength):
+    node.inputs['Strength'].default_value = strength
+
+
+def update_hdri_rotation_cycles(node, rotation):
+    node.rotation.z = rotation
 
 
 def import_hdr_corona(context):
@@ -725,8 +765,17 @@ def import_hdr_corona(context):
 
     corona.mode = 'latlong'
     corona.enviro_tex = hdr
-    corona.map_gi.intensity = manager.hdr_strength
-    corona.latlong_enviro_rotate = manager.hdr_rotation
+
+    update_hdri_strength_corona(corona, manager.hdr_strength)
+    update_hdri_rotation_corona(corona, manager.hdr_rotation)
+
+
+def update_hdri_strength_corona(corona, strength):
+    corona.map_gi.intensity = strength
+
+
+def update_hdri_rotation_corona(corona, rotation):
+    corona.latlong_enviro_rotate = rotation
 
 
 preview_collections = {}

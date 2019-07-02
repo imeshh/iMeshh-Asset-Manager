@@ -725,7 +725,7 @@ def import_hdr_corona(context):
     corona.mode = 'latlong'
     corona.enviro_tex = hdr
     corona.map_gi.intensity = manager.hdr_strength
-    corona.latlong_rotate_z = manager.hdr_rotation
+    corona.latlong_enviro_rotate = manager.hdr_rotation
 
 
 preview_collections = {}

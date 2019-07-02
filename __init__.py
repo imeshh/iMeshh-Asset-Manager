@@ -344,11 +344,11 @@ def scan_directory(self, context):
     print("Scanning directory: %s" % directory)
 
     if category == 'All':
-        enum_items = scan_for_elements_root(root_dir, enum_items, pcoll)
+        enum_items = scan_for_assets_root(root_dir, enum_items, pcoll)
     elif subcategory == 'All':
-        enum_items = scan_for_elements_category(os.path.join(root_dir, category), enum_items, pcoll)
+        enum_items = scan_for_assets_category(os.path.join(root_dir, category), enum_items, pcoll)
     elif directory and os.path.exists(directory):
-        enum_items = scan_for_elements(directory, enum_items, pcoll)
+        enum_items = scan_for_assets_subcategory(directory, enum_items, pcoll)
 
     # Return validation
     empty_path = os.path.join(os.path.dirname(root_dir), "empty.png")
@@ -368,7 +368,7 @@ def scan_directory(self, context):
 
 
 def is_hdr(file):
-    return file.lower().endswith(('.hdr', '.hdr'))
+    return file.lower().endswith(('.hdr', '.hdri', '.exr'))
 
 
 def is_blend(file):
@@ -390,59 +390,78 @@ def find_blend_in_path(path):
     return file_name
 
 
-# Scan for images and blend file (.blend)
-def scan_for_elements(directory, enum_items, pcoll):
+def load_preview(img_path, pcoll):
+    if img_path in pcoll:
+        return pcoll[img_path].icon_id
+    else:
+        thumb = pcoll.load(img_path, img_path, 'IMAGE')
+        return thumb.icon_id
+
+
+def scan_for_assets_subcategory(directory, enum_items, pcoll):
+    """
+    Scan for assets inside a sub category
+
+    :param directory: The path to the sub-category
+    :param enum_items: List of all enum items already scanned (will be mutated and returned)
+    :param pcoll: Preview collection
+    :return: Original enum_items parameter with the items from this sub-category added
+    """
     for item in os.listdir(directory):
         item_path = os.path.join(directory, item)
+
+        # Handle loose .hdr file
+        if is_hdr(item):
+            icon_id = load_preview(item_path, pcoll)
+            enum_items.append((item_path, item, item, icon_id, len(enum_items)))
+            continue
+
+        # The item is a folder that contains either a blend file or an HDRI file
         file_blend = find_blend_in_path(item_path)
 
+        # Find the preview and load it
         for file in os.listdir(item_path):
             if is_image(file):
                 img_path = os.path.join(item_path, file)
                 blend_path = os.path.join(item_path, file_blend)
-                if img_path in pcoll:
-                    enum_items.append((blend_path, item, file_blend, pcoll[img_path].icon_id, len(enum_items)))
-                else:
-                    thumb = pcoll.load(img_path, img_path, 'IMAGE')
-                    enum_items.append((blend_path, item, file_blend, thumb.icon_id, len(enum_items)))
+                icon_id = load_preview(img_path, pcoll)
+                enum_items.append((blend_path, item, file_blend, icon_id, len(enum_items)))
                 break
+        else:
+            # No preview found, if it's an HDRI than load that as the preview
+            if is_hdr(file_blend):
+                img_path = os.path.join(item_path, file_blend)
+                icon_id = load_preview(img_path, pcoll)
+                enum_items.append((img_path, item, file_blend, icon_id, len(enum_items)))
 
     return enum_items
 
 
-# Scan all subcategories inside a category
-def scan_for_elements_category(directory, enum_items, pcoll):
+def scan_for_assets_category(directory, enum_items, pcoll):
+    """
+    Scan for all assets inside a category
+
+    :param directory: The path to the category
+    :param enum_items: List of all enum items already scanned (will be mutated and returned)
+    :param pcoll: Preview collection
+    :return: Original enum_items parameter with the items from this category added
+    """
     for subcategory in os.listdir(directory):
-        scan_for_elements(os.path.join(directory, subcategory), enum_items, pcoll)
+        scan_for_assets_subcategory(os.path.join(directory, subcategory), enum_items, pcoll)
     return enum_items
 
-# Scan for images and blend file (.blend)
-def scan_for_elements_root(root, enum_items, pcoll):
-    image_paths = []
-    i = 0
 
-    for cat in os.listdir(root):
-        cat_path = os.path.join(root, cat)
-        for subcat in os.listdir(cat_path):
-            subcat_path = os.path.join(cat_path, subcat)
-            for item in os.listdir(subcat_path):
-                item_path = os.path.join(subcat_path, item)
+def scan_for_assets_root(root, enum_items, pcoll):
+    """
+    Scan for all assets in the asset library
 
-                file_blend = find_blend_in_path(item_path)
-
-                for file in os.listdir(item_path):
-                    if is_image(file):
-                        img_path = os.path.join(item_path, file)
-                        blend_path = os.path.join(item_path, file_blend)
-                        if img_path in pcoll:
-                            enum_items.append((blend_path, item, file_blend, pcoll[img_path].icon_id, i))
-                        else:
-                            thumb = pcoll.load(img_path, img_path, 'IMAGE')
-                            enum_items.append((blend_path, item, file_blend, thumb.icon_id, i))
-
-                        i = i + 1
-                        break
-
+    :param root: Path to the root folder of the asset library
+    :param enum_items: List of all enum items already scanned (will be mutated and returned)
+    :param pcoll: Preview collection
+    :return: Original enum_items parameter with the items from the asset library
+    """
+    for category in os.listdir(root):
+        scan_for_assets_category(os.path.join(root, category), enum_items, pcoll)
     return enum_items
 
 

@@ -39,8 +39,9 @@ def make_folders(root):
         'Seating': ['Stools', 'Lounge Chairs', 'Sofas', 'Benches', 'Chairs'],
         'Storage': ['Book Shelves', 'Dressers', 'TV Units', 'Wardrobes'],
         'Tables': ['Coffee Tables', 'Dining Tables', 'Office Desks', 'Side Tables'],
-        'Materials': ['Brick', 'Concrete', 'Fabrics', 'Ground', 'HDRI', 'Leather', 'Worktops', 'Metal', 'Paint',
-                      'Plaster', 'Plastic', 'Stone', 'Tiles', 'Wood', 'Wood Floors']
+        'Materials': ['Brick', 'Concrete', 'Fabrics', 'Ground', 'Leather', 'Worktops', 'Metal', 'Paint',
+                      'Plaster', 'Plastic', 'Stone', 'Tiles', 'Wood', 'Wood Floors'],
+        'HDRI': ['Interior', 'Exterior']
     }
 
     if not os.path.exists(root):

@@ -677,14 +677,14 @@ def import_hdr_cycles(context):
 
     node_output = node_tree.nodes.new("ShaderNodeOutputWorld")
     node_background = node_tree.nodes.new("ShaderNodeBackground")
-    node_image_tex = node_tree.nodes.new("ShaderNodeTexImage")
+    node_env_tex = node_tree.nodes.new("ShaderNodeTexEnvironment")
     node_mapping = node_tree.nodes.new("ShaderNodeMapping")
     node_tex_coord = node_tree.nodes.new("ShaderNodeTexCoord")
 
     nodes = [
         node_output,
         node_background,
-        node_image_tex,
+        node_env_tex,
         node_mapping,
         node_tex_coord
     ]
@@ -696,13 +696,13 @@ def import_hdr_cycles(context):
         node.location.x += x
 
     node_tree.links.new(node_tex_coord.outputs['Generated'], node_mapping.inputs["Vector"])
-    node_tree.links.new(node_mapping.outputs["Vector"], node_image_tex.inputs["Vector"])
-    node_tree.links.new(node_image_tex.outputs["Color"], node_background.inputs["Color"])
+    node_tree.links.new(node_mapping.outputs["Vector"], node_env_tex.inputs["Vector"])
+    node_tree.links.new(node_env_tex.outputs["Color"], node_background.inputs["Color"])
     node_tree.links.new(node_background.outputs["Background"], node_output.inputs["Surface"])
 
     # Load in the HDR
     hdr_image = bpy.data.images.load(hdr)
-    node_image_tex.image = hdr_image
+    node_env_tex.image = hdr_image
 
     manager = context.scene.asset_manager
 

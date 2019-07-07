@@ -156,7 +156,7 @@ class KAM_OpenThumbnail(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        selected_blend = bpy.data.window_managers["WinMan"].asset_manager_prevs
+        selected_blend = context.window_manager.asset_manager_prevs
 
         for (blend_path, _, file_blend, icon_id, _) in preview_collections['main'].asset_manager_prevs:
             print(blend_path, file_blend, icon_id)
@@ -566,7 +566,7 @@ def get_data_colls():
 
 # Get the selected file (either a blend or an HDR)
 def get_selected_file(context):
-    return bpy.data.window_managers["WinMan"].asset_manager_prevs
+    return context.window_manager.asset_manager_prevs
 
 
 def get_selected_blend(context):

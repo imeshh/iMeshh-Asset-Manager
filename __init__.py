@@ -23,6 +23,10 @@ bl_info = {
 HDRI_NODE_TAG = 'iMeshhHDRINode'
 
 
+def is_2_80():
+    return bpy.app.version >= (2, 80, 0)
+
+
 # Make folders for storing assets
 def make_folders(root):
     folders = {
@@ -544,18 +548,17 @@ class KAM_LinkToButton(bpy.types.Operator):
 
 
 def select(obj):
-    if bpy.app.version < (2, 80, 0):
-        obj.select = True
-    else:
+    if is_2_80():
         obj.select_set(True)
+    else:
+        obj.select = True
 
 
 def deselect(obj):
-    if bpy.app.version < (2, 80, 0):
-        obj.select = False
-    else:
+    if is_2_80():
         obj.select_set(False)
-
+    else:
+        obj.select = False
 
 def get_data_colls():
     if hasattr(bpy.data, "collections"):
@@ -585,17 +588,24 @@ def get_selected_hdr(context):
         return file
 
 
+def selectable_objects(context):
+    if is_2_80():
+        return context.view_layer.objects
+    return context.scene.objects
+
+
 # Import objects into current scene.
 def import_object(context, link):
     # active_layer = context.view_layer.active_layer_collection
 
-    for ob in bpy.context.scene.objects:
-        deselect(ob)
+    # Deselect all objects
+    for obj in selectable_objects(context):
+        deselect(obj)
 
     bpy.ops.object.select_all(action='DESELECT')
 
     # 2.79 and 2.80 killing me.
-    if bpy.app.version >= (2, 80, 0):
+    if is_2_80():
         if 'Assets' not in bpy.context.scene.collection.children.keys():
             asset_coll = bpy.data.collections.new('Assets')
             context.scene.collection.children.link(asset_coll)
@@ -613,7 +623,7 @@ def append_blend(blend_file, link=False):
     coll_name = os.path.splitext(os.path.basename(blend_file))[0].title()
     obj_coll = get_data_colls().new(coll_name)
 
-    if bpy.app.version >= (2, 80, 0):
+    if is_2_80():
         asset_coll = get_data_colls()['Assets']
         asset_coll.children.link(obj_coll)
 
@@ -629,7 +639,7 @@ def append_blend(blend_file, link=False):
 
         scenes = bpy.data.scenes[-len(scenes):]
         for scene in scenes:
-            if bpy.app.version < (2, 80, 0):
+            if not is_2_80():
                 for obj in scene.objects:
                     if obj.name.startswith('Camera'):
                         continue
@@ -653,7 +663,10 @@ def append_blend(blend_file, link=False):
             bpy.data.scenes.remove(scene)
 
         for obj in objects:
-            select(obj)
+            try:
+                select(obj)
+            except:
+                print('Unable to select obj: ' + obj.name)
 
 
 # Import objects into current scene.

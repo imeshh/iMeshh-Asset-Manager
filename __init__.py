@@ -595,19 +595,10 @@ def import_object(context, link):
     bpy.ops.object.select_all(action='DESELECT')
 
     # 2.79 and 2.80 killing me.
-    if bpy.app.version < (2, 80, 0):
-        if bpy.context.scene.objects.find('Assets') == -1:
-            asset_coll = bpy.data.groups.new('Assets')
-            for obj in context.scene.objects:
-                asset_coll.objects.link(obj)
-        else:
-            asset_coll = bpy.data.groups['Assets']
-    else:
+    if bpy.app.version >= (2, 80, 0):
         if 'Assets' not in bpy.context.scene.collection.children.keys():
             asset_coll = bpy.data.collections.new('Assets')
             context.scene.collection.children.link(asset_coll)
-        else:
-            asset_coll = bpy.data.collections['Assets']
 
     blend = get_selected_blend(context)
 
@@ -619,15 +610,11 @@ def import_object(context, link):
 
 # Import blend file
 def append_blend(blend_file, link=False):
-    asset_coll = get_data_colls()['Assets']
-
     coll_name = os.path.splitext(os.path.basename(blend_file))[0].title()
     obj_coll = get_data_colls().new(coll_name)
 
-    if bpy.app.version < (2, 80, 0):
-        for obj in asset_coll.objects:
-            obj_coll.objects.link(obj)
-    else:
+    if bpy.app.version >= (2, 80, 0):
+        asset_coll = get_data_colls()['Assets']
         asset_coll.children.link(obj_coll)
 
     objects = []

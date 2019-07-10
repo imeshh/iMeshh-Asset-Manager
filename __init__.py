@@ -156,7 +156,7 @@ class KAM_Popup(bpy.types.Operator):
 class KAM_OpenThumbnail(bpy.types.Operator):
     """Open the thumbnail image"""
     bl_idname = "asset_manager.open_thumbnail"
-    bl_label = "Open Thumbnail"
+    bl_label = "Thumbnail"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
@@ -183,7 +183,7 @@ def open_blend(binary, filepath):
 class KAM_OpenBlend(bpy.types.Operator):
     """Open the .blend file for the asset"""
     bl_idname = "asset_manager.open_blend"
-    bl_label = "Open Thumbnail"
+    bl_label = ".blend"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod

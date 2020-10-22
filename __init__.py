@@ -76,7 +76,7 @@ class KAM_PrefPanel(bpy.types.AddonPreferences):
         subtype="DIR_PATH")
     
     switch_corona : BoolProperty(
-        name="Enable switch",
+        name="Enable Corona/Blender switch",
         default=False,
         description=" Enable switch corona / cycle in Imeshh settings panel")
 
@@ -885,15 +885,18 @@ def register():
     
     WindowManager.asset_manager_ignore_camera = BoolProperty(
         name="Ignore camera when importing",
-        default=True)
+        default=True,
+        description="This addon will ignore all cameras by default. If you want to import cameras then untick this box")
     
     WindowManager.asset_manager_collection_import = BoolProperty(
         name="Import other collections if available",
-        default=False)
+        default=False,
+        description="If there are multiple collections in this file, and you don't want to just import the scene collection, then tick this box")
     
     WindowManager.asset_manager_auto_rename = BoolProperty(
         name="Auto rename Collection to file name",
-        default=True)
+        default=True,
+        description="This addon, by default, will just import the scene collection. This will then auto-rename the scene collection to the assets file name. This will make it easier to find in the library")
 
 
     WindowManager.asset_manager_prevs = EnumProperty(items=scan_directory)

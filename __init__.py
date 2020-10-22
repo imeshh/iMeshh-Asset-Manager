@@ -1,9 +1,10 @@
 from bpy.types import WindowManager
 import bpy.utils.previews
-from bpy.props import PointerProperty, StringProperty, EnumProperty, FloatProperty
+from bpy.props import PointerProperty, StringProperty, EnumProperty, FloatProperty, BoolProperty
 import bpy
 import os
 import sys
+import re
 import subprocess
 import webbrowser
 
@@ -11,8 +12,8 @@ from . import addon_updater_ops
 
 bl_info = {
     "name": "iMeshh Asset Manager",
-    "version": (0, 2, 63),
-    "blender": (2, 80, 0),
+    "version": (0, 2, 7),
+    "blender": (2, 90, 1),
     "location": "View3D > TOOLS > iMeshh",
     "author": "iMeshh",
     "description": "Manager for iMeshh models",
@@ -68,39 +69,44 @@ def make_folders(root):
 class KAM_PrefPanel(bpy.types.AddonPreferences):
     bl_idname = __name__
 
-    asset_dir = StringProperty(
+    asset_dir : StringProperty(
         name="Assets Path",
         default=os.path.join(os.path.dirname(__file__), 'Assets'),
         description="Show only hotkeys that have this text in their name",
         subtype="DIR_PATH")
+    
+    switch_corona : BoolProperty(
+        name="Enable switch",
+        default=False,
+        description=" Enable switch corona / cycle in Imeshh settings panel")
 
     # addon updater preferences
-    auto_check_update = bpy.props.BoolProperty(
+    auto_check_update : bpy.props.BoolProperty(
         name="Auto-check for Update",
         description="If enabled, auto-check for updates using an interval",
         default=False,
     )
 
-    updater_intrval_months = bpy.props.IntProperty(
+    updater_intrval_months : bpy.props.IntProperty(
         name='Months',
         description="Number of months between checking for updates",
         default=0,
         min=0
     )
-    updater_intrval_days = bpy.props.IntProperty(
+    updater_intrval_days : bpy.props.IntProperty(
         name='Days',
         description="Number of days between checking for updates",
         default=7,
         min=0,
     )
-    updater_intrval_hours = bpy.props.IntProperty(
+    updater_intrval_hours : bpy.props.IntProperty(
         name='Hours',
         description="Number of hours between checking for updates",
         default=0,
         min=0,
         max=23
     )
-    updater_intrval_minutes = bpy.props.IntProperty(
+    updater_intrval_minutes : bpy.props.IntProperty(
         name='Minutes',
         description="Number of minutes between checking for updates",
         default=0,
@@ -113,6 +119,8 @@ class KAM_PrefPanel(bpy.types.AddonPreferences):
         row = layout.row()
         row.prop(self, "asset_dir", text='Assets path')
         row.operator("asset_manager.make_folder", icon="PROP_CON")
+        row = layout.row()
+        row.prop(self, "switch_corona")
 
         addon_updater_ops.update_settings_ui(self, context)
 
@@ -126,6 +134,28 @@ class KAM_MakeFolder(bpy.types.Operator):
         root = get_root_dir(context)
         make_folders(root)
         return {'FINISHED'}
+
+
+#Settings panel for menu on the right
+class KAM_SettingsPanel(bpy.types.Panel):
+    bl_label = "iMeshh Settings"
+    bl_idname = "KRIS_PT_Imesh_Settings"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "iMeshh"
+    bl_options = {"DEFAULT_CLOSED"}
+
+    # Draw the panel
+    def draw(self, context):
+        layout = self.layout
+        if get_pref_switch(context):
+            manager = context.scene.asset_manager
+            layout.prop(manager, 'blend')
+        col = layout.column(heading ='Linked Object Settings')
+        col.prop(context.window_manager, 'asset_manager_collection_import')
+        col.prop(context.window_manager, 'asset_manager_auto_rename')
+        col = layout.column(heading ='Camera Settings')
+        col.prop(context.window_manager, 'asset_manager_ignore_camera')
 
 
 # Panel for menu on the right
@@ -220,12 +250,14 @@ def KAM_UI(self, context):
         row.operator("asset_manager.open_thumbnail", icon="FILE_IMAGE")
         row.operator("asset_manager.open_blend", icon="FILE_BLEND")
 
-        row = layout.row()
-        row.prop(manager, "blend", expand=True)
+        #row = layout.row()
+        #row.prop(manager, "blend", expand=True)
 
         if get_selected_blend(context):
-            row = layout.row()
-            row.operator("asset_manager.import_object", icon='APPEND_BLEND')
+            row = layout.column()
+            spl = row.split()
+            spl.operator("asset_manager.import_object", icon='APPEND_BLEND').link = False
+            spl.operator("asset_manager.import_object", icon='LINK_BLEND', text='Link Object').link = True
 
             row = layout.row()
             row.operator("asset_manager.import_material", icon='TEXTURE_DATA')
@@ -252,6 +284,16 @@ def get_root_dir(context=None):
 
     return pref.asset_dir
 
+def get_pref_switch(context=None):
+    if not context:
+        context = bpy.Context
+
+    if hasattr(context, "preferences"):
+        pref = context.preferences.addons[__name__].preferences
+    else:
+        pref = context.user_preferences.addons[__name__].preferences
+
+    return pref.switch_corona
 
 def category_items(self, context):
     categories = []
@@ -320,25 +362,25 @@ def hdr_rotation_update(self, context):
 
 # PropertyGroup for this asset manager
 class KrisAssetManager(bpy.types.PropertyGroup):
-    cat = EnumProperty(
+    cat : EnumProperty(
         items=category_items,
         name="Category",
         description="Select a Category",
         update=subcategory_items)
 
-    subcat = EnumProperty(
+    subcat : EnumProperty(
         items=subcategory_items,
         name="Subcategory",
         description="Select subcategory",
         update=None)
 
-    blend = EnumProperty(
+    blend : EnumProperty(
         items=[('cycles', 'Cycles', '', 0), ('corona', 'Corona', '', 1)],
         name="Blend",
         description="Select blend")
 
     # HDR properties
-    hdr_strength = FloatProperty(
+    hdr_strength : FloatProperty(
         default=1,
         soft_max=1,
         soft_min=0,
@@ -347,7 +389,7 @@ class KrisAssetManager(bpy.types.PropertyGroup):
         update=hdr_strength_update
     )
 
-    hdr_rotation = FloatProperty(
+    hdr_rotation : FloatProperty(
         default=0,
         subtype="ANGLE",
         name="Environment Angle",
@@ -441,32 +483,35 @@ def scan_for_assets_subcategory(directory, enum_items, pcoll):
     :param pcoll: Preview collection
     :return: Original enum_items parameter with the items from this sub-category added
     """
-    for item in os.listdir(directory):
-        item_path = os.path.join(directory, item)
+    if os.path.isdir(directory):
+        for item in os.listdir(directory):
+            item_path = os.path.join(directory, item)
 
-        # Handle loose .hdr file
-        if is_hdr(item):
-            icon_id = load_preview(item_path, pcoll)
-            enum_items.append((item_path, item, item, icon_id, len(enum_items)))
-            continue
+            # Handle loose .hdr file
+            if is_hdr(item):
+                icon_id = load_preview(item_path, pcoll)
+                enum_items.append((item_path, item, item, icon_id, len(enum_items)))
+                continue
 
-        # The item is a folder that contains either a blend file or an HDRI file
-        file_blend = find_blend_in_path(item_path)
+            #Check validity of item_path
+            if os.path.isdir(item_path):
+                # The item is a folder that contains either a blend file or an HDRI file
+                file_blend = find_blend_in_path(item_path)
 
-        # Find the preview and load it
-        for file in os.listdir(item_path):
-            if is_image(file):
-                img_path = os.path.join(item_path, file)
-                blend_path = os.path.join(item_path, file_blend)
-                icon_id = load_preview(img_path, pcoll)
-                enum_items.append((blend_path, item, file_blend, icon_id, len(enum_items)))
-                break
-        else:
-            # No preview found, if it's an HDRI than load that as the preview
-            if is_hdr(file_blend):
-                img_path = os.path.join(item_path, file_blend)
-                icon_id = load_preview(img_path, pcoll)
-                enum_items.append((img_path, item, file_blend, icon_id, len(enum_items)))
+                # Find the preview and load it
+                for file in os.listdir(item_path):
+                    if is_image(file):
+                        img_path = os.path.join(item_path, file)
+                        blend_path = os.path.join(item_path, file_blend)
+                        icon_id = load_preview(img_path, pcoll)
+                        enum_items.append((blend_path, item, file_blend, icon_id, len(enum_items)))
+                        break
+                else:
+                    # No preview found, if it's an HDRI than load that as the preview
+                    if is_hdr(file_blend):
+                        img_path = os.path.join(item_path, file_blend)
+                        icon_id = load_preview(img_path, pcoll)
+                        enum_items.append((img_path, item, file_blend, icon_id, len(enum_items)))
 
     return enum_items
 
@@ -480,8 +525,9 @@ def scan_for_assets_category(directory, enum_items, pcoll):
     :param pcoll: Preview collection
     :return: Original enum_items parameter with the items from this category added
     """
-    for subcategory in os.listdir(directory):
-        scan_for_assets_subcategory(os.path.join(directory, subcategory), enum_items, pcoll)
+    if os.path.isdir(directory):
+        for subcategory in os.listdir(directory):
+            scan_for_assets_subcategory(os.path.join(directory, subcategory), enum_items, pcoll)
     return enum_items
 
 
@@ -494,19 +540,21 @@ def scan_for_assets_root(root, enum_items, pcoll):
     :param pcoll: Preview collection
     :return: Original enum_items parameter with the items from the asset library
     """
-    for category in os.listdir(root):
-        scan_for_assets_category(os.path.join(root, category), enum_items, pcoll)
+    if os.path.isdir(root):
+        for category in os.listdir(root):
+            scan_for_assets_category(os.path.join(root, category), enum_items, pcoll)
     return enum_items
 
 
 # Import button
 class KAM_ImportObjectButton(bpy.types.Operator):
     bl_idname = "asset_manager.import_object"
-    bl_label = "Import Object"
+    bl_label = "Append Object"
     bl_description = 'Appends object to scene'
+    link : BoolProperty(False)
 
     def execute(self, context):
-        import_object(context, link=False)
+        import_object(context, link=self.link)
         return {'FINISHED'}
 
 
@@ -553,13 +601,6 @@ def select(obj):
     else:
         obj.select = True
 
-
-def deselect(obj):
-    if is_2_80():
-        obj.select_set(False)
-    else:
-        obj.select = False
-
 def get_data_colls():
     if hasattr(bpy.data, "collections"):
         return bpy.data.collections
@@ -599,9 +640,8 @@ def import_object(context, link):
     # active_layer = context.view_layer.active_layer_collection
 
     # Deselect all objects
-    for obj in selectable_objects(context):
-        deselect(obj)
-
+    if  bpy.ops.object.mode_set.poll():
+        bpy.ops.object.mode_set(mode='OBJECT', toggle = False)
     bpy.ops.object.select_all(action='DESELECT')
 
     # 2.79 and 2.80 killing me.
@@ -611,11 +651,71 @@ def import_object(context, link):
             context.scene.collection.children.link(asset_coll)
 
     blend = get_selected_blend(context)
-
     if blend:
         append_blend(blend, link)
 
         # context.view_layer.active_layer_collection = active_layer
+
+def create_instance_collection(collection, parent_collection):
+    empty = bpy.data.objects.new(name = collection.name, object_data = None)
+    empty.instance_collection = collection
+    empty.instance_type = 'COLLECTION'
+    parent_collection.objects.link(empty)
+    return empty
+
+def select_coll_to_import(collection_names):
+    """ Select wich collection import following the file type and user preferences
+    - collection_names : collections names array avalaibles in the blender file
+    """
+    #file has no collections (blander version < blender 2.80)
+    if not collection_names:
+        return None
+    
+    #User ask for import all collections of blend file
+    if bpy.context.window_manager.asset_manager_collection_import == True:
+        return collection_names
+
+    # there is a collection call 'Collection'
+    if 'Collection' in collection_names:
+        return ['Collection']
+    
+    # there is no 'Collection' but something like 'Collection.xxx'
+    colls = []
+    for col in collection_names:
+        if re.match(r'(^collection)', col, re.IGNORECASE):
+            colls.append(col)
+    if colls:
+        return colls
+    #there is collection but no match, import all
+    else:
+        return collection_names
+        
+
+def link_collections(blend_file, parent_col):
+    """ Import collections of a blend file as instances collection if it's possible
+    - blend_file : file with collection to import
+    - parent_col : collection of actual file wich will get as child news instances collections
+    """
+    objects_linked = False
+    with bpy.data.libraries.load(blend_file, link = True) as (data_from, data_to):
+        data_to.collections = select_coll_to_import(data_from.collections)
+        if data_to.collections == None:
+            objects_linked = True
+            data_to.objects = data_from.objects
+    #no collection found in blend file
+    if objects_linked:
+        for obj in data_to.objects:
+            if bpy.context.window_manager.asset_manager_ignore_camera and obj.type == 'CAMERA':
+                continue
+            parent_col.objects.link(obj)
+            select(obj)
+    else:
+        #create all instances collections
+        for col in data_to.collections:
+            instance = create_instance_collection(col, parent_col)
+            if re.match(r'(^collection)', instance.name, re.IGNORECASE) and bpy.context.window_manager.asset_manager_auto_rename == True:
+                instance.name = parent_col.name
+            select(instance)
 
 
 # Import blend file
@@ -627,53 +727,26 @@ def append_blend(blend_file, link=False):
         asset_coll = get_data_colls()['Assets']
         asset_coll.children.link(obj_coll)
 
-    objects = []
-    if is_blend(blend_file):
-        scenes = []
-        with bpy.data.libraries.load(blend_file) as (data_from, data_to):
-            for name in data_from.scenes:
-                scenes.append({'name': name})
+    if not link:
+        with bpy.data.libraries.load(blend_file, link = link) as (data_from, data_to):
+            data_to.objects = data_from.objects
 
-        action = bpy.ops.wm.link if link else bpy.ops.wm.append
-        action(directory=blend_file + "/Scene/", files=scenes)
+        for obj in data_to.objects:
+            if bpy.context.window_manager.asset_manager_ignore_camera and obj.type == 'CAMERA':
+                continue
+            obj_coll.objects.link(obj)
+            select(obj)
+    else:
+        link_collections(blend_file, obj_coll)
 
-        scenes = bpy.data.scenes[-len(scenes):]
-        for scene in scenes:
-            if not is_2_80():
-                for obj in scene.objects:
-                    if obj.name.startswith('Camera'):
-                        continue
-
-                    bpy.context.scene.objects.link(obj)
-                    objects.append(obj)
-            else:
-                for coll in scene.collection.children:
-                    if coll.name.startswith('Collection'):
-                        for object in coll.objects:
-                            if object.name.startswith('Camera'):
-                                continue
-                            obj_coll.objects.link(object)
-                            objects.append(object)
-
-                        for sub_coll in coll.children:
-                            obj_coll.children.link(sub_coll)
-                    else:
-                        obj_coll.children.link(coll)
-
-            bpy.data.scenes.remove(scene)
-
-        for obj in objects:
-            try:
-                select(obj)
-            except:
-                print('Unable to select obj: ' + obj.name)
+    bpy.ops.view3d.snap_selected_to_cursor(use_offset=True)
 
 
 # Import objects into current scene.
 def import_material(context, link):
     active_ob = context.active_object
-    for ob in bpy.context.scene.objects:
-        deselect(ob)
+    if bpy.ops.object.mode_set.poll(): 
+        bpy.ops.object.mode_set(mode='OBJECT', toggle = False)
     bpy.ops.object.select_all(action='DESELECT')
 
     blend = get_selected_blend(context)
@@ -783,6 +856,7 @@ preview_collections = {}
 # Classes to register
 classes = (
     KAM_PrefPanel,
+    KAM_SettingsPanel,
     KAM_MakeFolder,
     KAM_Panel,
     KAM_Popup,
@@ -808,6 +882,19 @@ def register():
         name="Folder Path",
         subtype='DIR_PATH',
         default="")
+    
+    WindowManager.asset_manager_ignore_camera = BoolProperty(
+        name="Ignore camera when importing",
+        default=True)
+    
+    WindowManager.asset_manager_collection_import = BoolProperty(
+        name="Import other collections if available",
+        default=False)
+    
+    WindowManager.asset_manager_auto_rename = BoolProperty(
+        name="Auto rename Collection to file name",
+        default=True)
+
 
     WindowManager.asset_manager_prevs = EnumProperty(items=scan_directory)
 
@@ -824,7 +911,8 @@ def unregister():
     addon_updater_ops.unregister()
 
     del WindowManager.asset_manager_prevs
-
+    del WindowManager.asset_manager_ignore_camera
+    
     for pcoll in preview_collections.values():
         bpy.utils.previews.remove(pcoll)
 
@@ -838,4 +926,3 @@ def unregister():
 
 if __name__ == "__main__":
     register()
-

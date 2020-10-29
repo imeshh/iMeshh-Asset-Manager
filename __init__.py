@@ -12,7 +12,7 @@ from . import addon_updater_ops
 
 bl_info = {
     "name": "iMeshh Asset Manager",
-    "version": (0, 2, 79),
+    "version": (0, 2, 81),
     "blender": (2, 90, 1),
     "location": "View3D > TOOLS > iMeshh",
     "author": "iMeshh",
@@ -64,7 +64,6 @@ def make_folders(root):
             path1 = os.path.join(path, sub)
             if not os.path.exists(path1):
                 os.mkdir(path1)
-
 
 class KAM_PrefPanel(bpy.types.AddonPreferences):
     bl_idname = __name__
@@ -702,6 +701,11 @@ def link_collections(blend_file, parent_col):
         if data_to.collections == None:
             objects_linked = True
             data_to.objects = data_from.objects
+    
+    # fix if color space unrecognized
+    for img in bpy.data.images:
+        if img.colorspace_settings.name == '':
+            img.colorspace_settings.name = 'sRGB'
     #no collection found in blend file
     if objects_linked:
         for obj in data_to.objects:
@@ -730,6 +734,11 @@ def append_blend(blend_file, link=False):
     if not link:
         with bpy.data.libraries.load(blend_file, link = link) as (data_from, data_to):
             data_to.objects = data_from.objects
+        
+        # fix if color space unrecognized
+        for img in bpy.data.images:
+            if img.colorspace_settings.name == '':
+                img.colorspace_settings.name = 'sRGB'
 
         for obj in data_to.objects:
             if bpy.context.window_manager.asset_manager_ignore_camera and obj.type == 'CAMERA':
@@ -816,7 +825,7 @@ def import_hdr_cycles(context):
     update_hdri_strength_cycles(node_background, manager.hdr_strength)
 
     # Set the environment rotation
-    update_hdri_rotation_cycles(node_mapping, manager.hdr_rotation)
+    #update_hdri_rotation_cycles(node_mapping, manager.hdr_rotation)
 
 
 def update_hdri_strength_cycles(node, strength):

@@ -27,7 +27,6 @@ HDRI_NODE_TAG = 'iMeshhHDRINode'
 def is_2_80():
     return bpy.app.version >= (2, 80, 0)
 
-
 # Make folders for storing assets
 def make_folders(root):
     folders = {
@@ -265,10 +264,16 @@ def KAM_UI(self, context):
             row.operator("asset_manager.import_hdr", icon='TEXTURE_DATA')
 
             row = layout.row()
-            row.prop(manager, "hdr_strength")
+            #row.prop(manager, "hdr_strength")
 
-            row = layout.row()
-            row.prop(manager, "hdr_rotation")
+            col = layout.column()
+            #row.prop(manager, "hdr_rotation")
+            if context.scene.world.node_tree and'GROUND_PROJECTION' in context.scene.world.node_tree.nodes:
+                col.prop(context.scene.world.node_tree.nodes['GROUND_PROJECTION'].inputs[1], 'default_value', text='Rotation')
+            if context.scene.world.node_tree and'HDRI_GROUP' in context.scene.world.node_tree.nodes:
+                col.prop(context.scene.world.node_tree.nodes['HDRI_GROUP'].inputs[2], 'default_value', text='Sky strengtH')
+                col.prop(context.scene.world.node_tree.nodes['HDRI_GROUP'].inputs[8], 'default_value', text='Tint value')
+                col.prop(context.scene.world.node_tree.nodes['HDRI_GROUP'].inputs[10], 'default_value', text='Saturation')
 
 
 # Get root directory from user preferences
@@ -786,22 +791,25 @@ def import_hdr_cycles(context):
 
     # Start from a clean slate
     node_tree.nodes.clear()
+    path_nodes_blend = os.path.join(os.path.dirname(__file__), 'hdrinodes.blend')
+    with bpy.data.libraries.load(path_nodes_blend, link = False) as (data_from, data_to):
+        data_to.node_groups = data_from.node_groups
+    
+    hdri_group = node_tree.nodes.new('ShaderNodeGroup')
+    hdri_group.name = 'HDRI_GROUP'
+    hdri_group.node_tree = bpy.data.node_groups['HDRI Nodes']
+    ground_projection = node_tree.nodes.new('ShaderNodeGroup')
+    ground_projection.name = 'GROUND_PROJECTION'
+    ground_projection.node_tree = bpy.data.node_groups['Ground Projection Off/On']
 
     node_output = node_tree.nodes.new("ShaderNodeOutputWorld")
-    node_background = node_tree.nodes.new("ShaderNodeBackground")
     node_env_tex = node_tree.nodes.new("ShaderNodeTexEnvironment")
-    node_mapping = node_tree.nodes.new("ShaderNodeMapping")
-    node_tex_coord = node_tree.nodes.new("ShaderNodeTexCoord")
-
-    node_mapping[HDRI_NODE_TAG] = True
-    node_background[HDRI_NODE_TAG] = True
 
     nodes = [
         node_output,
-        node_background,
+        hdri_group,
         node_env_tex,
-        node_mapping,
-        node_tex_coord
+        ground_projection,
     ]
     x = 600
 
@@ -810,10 +818,9 @@ def import_hdr_cycles(context):
         x -= 80
         node.location.x += x
 
-    node_tree.links.new(node_tex_coord.outputs['Generated'], node_mapping.inputs["Vector"])
-    node_tree.links.new(node_mapping.outputs["Vector"], node_env_tex.inputs["Vector"])
-    node_tree.links.new(node_env_tex.outputs["Color"], node_background.inputs["Color"])
-    node_tree.links.new(node_background.outputs["Background"], node_output.inputs["Surface"])
+    node_tree.links.new(ground_projection.outputs["Color"], node_env_tex.inputs["Vector"])
+    node_tree.links.new(node_env_tex.outputs["Color"], hdri_group.inputs["HDRI"])
+    node_tree.links.new(hdri_group.outputs["Shader"], node_output.inputs["Surface"])
 
     # Load in the HDR
     hdr_image = bpy.data.images.load(hdr)
@@ -822,7 +829,7 @@ def import_hdr_cycles(context):
     manager = context.scene.asset_manager
 
     # Set the strength
-    update_hdri_strength_cycles(node_background, manager.hdr_strength)
+    #update_hdri_strength_cycles(node_background, manager.hdr_strength)
 
     # Set the environment rotation
     #update_hdri_rotation_cycles(node_mapping, manager.hdr_rotation)

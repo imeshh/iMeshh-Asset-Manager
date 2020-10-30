@@ -12,7 +12,7 @@ from . import addon_updater_ops
 
 bl_info = {
     "name": "iMeshh Asset Manager",
-    "version": (0, 2, 81),
+    "version": (0, 2, 82),
     "blender": (2, 90, 1),
     "location": "View3D > TOOLS > iMeshh",
     "author": "iMeshh",
@@ -266,14 +266,16 @@ def KAM_UI(self, context):
             row = layout.row()
             #row.prop(manager, "hdr_strength")
 
-            col = layout.column()
             #row.prop(manager, "hdr_rotation")
-            if context.scene.world.node_tree and'GROUND_PROJECTION' in context.scene.world.node_tree.nodes:
-                col.prop(context.scene.world.node_tree.nodes['GROUND_PROJECTION'].inputs[1], 'default_value', text='Rotation')
-            if context.scene.world.node_tree and'HDRI_GROUP' in context.scene.world.node_tree.nodes:
-                col.prop(context.scene.world.node_tree.nodes['HDRI_GROUP'].inputs[2], 'default_value', text='Sky strengtH')
-                col.prop(context.scene.world.node_tree.nodes['HDRI_GROUP'].inputs[8], 'default_value', text='Tint value')
-                col.prop(context.scene.world.node_tree.nodes['HDRI_GROUP'].inputs[10], 'default_value', text='Saturation')
+            if context.scene.world.node_tree and 'GROUND_PROJECTION' in context.scene.world.node_tree.nodes:
+                col = layout.column(heading ='Ground projection')
+                for inp in context.scene.world.node_tree.nodes['GROUND_PROJECTION'].inputs:
+                    col.prop(inp, 'default_value', text=inp.name)
+            if context.scene.world.node_tree and 'HDRI_GROUP' in context.scene.world.node_tree.nodes:
+                col = layout.column(heading ='HDRI')
+                for inp in context.scene.world.node_tree.nodes['HDRI_GROUP'].inputs:
+                    if inp.name != 'HDRI':
+                        col.prop(inp, 'default_value', text=inp.name)
 
 
 # Get root directory from user preferences

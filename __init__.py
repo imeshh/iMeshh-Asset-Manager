@@ -792,20 +792,43 @@ def import_hdr_cycles(context):
     node_tree = world.node_tree
 
     # Start from a clean slate
-    node_tree.nodes.clear()
+    #node_tree.nodes.clear()
     path_nodes_blend = os.path.join(os.path.dirname(__file__), 'hdrinodes.blend')
-    with bpy.data.libraries.load(path_nodes_blend, link = False) as (data_from, data_to):
-        data_to.node_groups = data_from.node_groups
     
-    hdri_group = node_tree.nodes.new('ShaderNodeGroup')
-    hdri_group.name = 'HDRI_GROUP'
-    hdri_group.node_tree = bpy.data.node_groups['HDRI Nodes']
-    ground_projection = node_tree.nodes.new('ShaderNodeGroup')
-    ground_projection.name = 'GROUND_PROJECTION'
-    ground_projection.node_tree = bpy.data.node_groups['Ground Projection Off/On']
+    if not 'OUTPUTNODE' in node_tree.nodes:
+        node_output = None
+        for node in node_tree.nodes:
+            if node.bl_idname == 'ShaderNodeOutputWorld':
+                node_output = node
+        if not node_output:        
+            node_output = node_tree.nodes.new("ShaderNodeOutputWorld")
+        node_output.name = 'OUTPUTNODE'
+    else:
+        node_output = node_tree.nodes['OUTPUTNODE']
 
-    node_output = node_tree.nodes.new("ShaderNodeOutputWorld")
-    node_env_tex = node_tree.nodes.new("ShaderNodeTexEnvironment")
+    if not 'Ground Projection Off/On' in bpy.data.node_groups or not 'HDRI Nodes' in bpy.data.node_groups:
+        with bpy.data.libraries.load(path_nodes_blend, link = False) as (data_from, data_to):
+            data_to.node_groups = data_from.node_groups
+
+    if not 'HDRI_GROUP' in node_tree.nodes:
+        hdri_group = node_tree.nodes.new('ShaderNodeGroup')
+        hdri_group.name = 'HDRI_GROUP'
+        hdri_group.node_tree = bpy.data.node_groups['HDRI Nodes']
+    else:
+        hdri_group = node_tree.nodes['HDRI_GROUP']
+
+    if not 'GROUND_PROJECTION' in node_tree.nodes:
+        ground_projection = node_tree.nodes.new('ShaderNodeGroup')
+        ground_projection.name = 'GROUND_PROJECTION'
+        ground_projection.node_tree = bpy.data.node_groups['Ground Projection Off/On']
+    else:
+        ground_projection = node_tree.nodes['GROUND_PROJECTION']
+    
+    if not 'ENVTEX' in node_tree.nodes:
+        node_env_tex = node_tree.nodes.new("ShaderNodeTexEnvironment")
+        node_env_tex.name = 'ENVTEX'
+    else:
+        node_env_tex = node_tree.nodes['ENVTEX']
 
     nodes = [
         node_output,
@@ -818,7 +841,7 @@ def import_hdr_cycles(context):
     for i, node in enumerate(nodes):
         x -= nodes[i].width
         x -= 80
-        node.location.x += x
+        node.location.x = x
 
     node_tree.links.new(ground_projection.outputs["Color"], node_env_tex.inputs["Vector"])
     node_tree.links.new(node_env_tex.outputs["Color"], hdri_group.inputs["HDRI"])
@@ -827,14 +850,6 @@ def import_hdr_cycles(context):
     # Load in the HDR
     hdr_image = bpy.data.images.load(hdr)
     node_env_tex.image = hdr_image
-
-    manager = context.scene.asset_manager
-
-    # Set the strength
-    #update_hdri_strength_cycles(node_background, manager.hdr_strength)
-
-    # Set the environment rotation
-    #update_hdri_rotation_cycles(node_mapping, manager.hdr_rotation)
 
 
 def update_hdri_strength_cycles(node, strength):

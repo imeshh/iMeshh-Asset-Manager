@@ -27,6 +27,11 @@ HDRI_NODE_TAG = 'iMeshhHDRINode'
 def is_2_80():
     return bpy.app.version >= (2, 80, 0)
 
+def reset_cat(self, context):
+    context.scene.asset_manager.cat = 'All'
+    context.scene.asset_manager.subcat = '.'
+
+
 # Make folders for storing assets
 def make_folders(root):
     folders = {
@@ -73,17 +78,17 @@ class KAM_PrefPanel(bpy.types.AddonPreferences):
         description="Show only hotkeys that have this text in their name",
         subtype="DIR_PATH")
     
-    # material_dir : StringProperty(
-    #     name="Material Path",
-    #     default=os.path.join(os.path.dirname(__file__), 'Assets'),
-    #     description="Show only hotkeys that have this text in their name",
-    #     subtype="DIR_PATH")
+    material_dir : StringProperty(
+        name="Material Path",
+        default=os.path.join(os.path.dirname(__file__), 'Assets'),
+        description="Show only hotkeys that have this text in their name",
+        subtype="DIR_PATH")
     
-    # hdri_dir : StringProperty(
-    #     name="HDRI Path",
-    #     default=os.path.join(os.path.dirname(__file__), 'Assets'),
-    #     description="Show only hotkeys that have this text in their name",
-    #     subtype="DIR_PATH")
+    hdri_dir : StringProperty(
+        name="HDRI Path",
+        default=os.path.join(os.path.dirname(__file__), 'Assets'),
+        description="Show only hotkeys that have this text in their name",
+        subtype="DIR_PATH")
     
 
     switch_corona : BoolProperty(
@@ -129,8 +134,8 @@ class KAM_PrefPanel(bpy.types.AddonPreferences):
         layout = self.layout
         row = layout.row()
         row.prop(self, "asset_dir", text='Assets path')
-        # row.prop(self, "material_dir", text='Materials path')
-        # row.prop(self, "hdri_dir", text='HDRI path')
+        row.prop(self, "material_dir", text='Materials path')
+        row.prop(self, "hdri_dir", text='HDRI path')
         row.operator("asset_manager.make_folder", icon="PROP_CON")
         row = layout.row()
         row.prop(self, "switch_corona")
@@ -144,14 +149,14 @@ class KAM_MakeFolder(bpy.types.Operator):
     bl_description = 'Make Assets folder'
 
     def execute(self, context):
-        #hdri_dir = context.preferences.addons[__name__].preferences.hdri_dir
-        #material_dir = context.preferences.addons[__name__].preferences.material_dir
+        hdri_dir = context.preferences.addons[__name__].preferences.hdri_dir
+        material_dir = context.preferences.addons[__name__].preferences.material_dir
         root = get_root_dir(context)
         make_folders(root)
-        # if hdri_dir == root:
-        #     hdri_dir = os.path.join(hdri_dir, 'HDRI')
-        # if material_dir == root:
-        #     meterial_dir = os.path.join(hdri_dir, 'Materials')
+        if hdri_dir == root:
+            hdri_dir = os.path.join(root, 'HDRI')
+        if material_dir == root:
+            material_dir = os.path.join(root, 'Materials')
 
         return {'FINISHED'}
 
@@ -202,7 +207,7 @@ class KAM_OpenThumbnail(bpy.types.Operator):
         selected_blend = context.window_manager.asset_manager_prevs
         
         for (blend_path, _, file_blend, icon_id, _) in preview_collections['main'].asset_manager_prevs:
-            print(blend_path, file_blend, icon_id)
+            #print(blend_path, file_blend, icon_id)
             if blend_path == selected_blend:
                 for (preview_path, preview_image) in preview_collections['main'].items():
                     if preview_image.icon_id == icon_id:
@@ -261,7 +266,8 @@ def KAM_UI(self, context):
     # Categories Drop Down Menu
     col = layout.column()
     col.prop(manager, "cat")
-    col.prop(manager, "subcat")
+    if manager.subcat:
+        col.prop(manager, "subcat")
     
     # Thumbnail view
     if len(wm.asset_manager_prevs) != 0:
@@ -307,10 +313,10 @@ def get_root_dir(context=None):
     else:
         pref = context.user_preferences.addons[__name__].preferences
     
-    # if context.scene.asset_manager.tabs == 'HDRI':
-    #     return pref.hdri_dir
-    # elif context.scene.asset_manager.tabs == 'MATERIAL':
-    #     return pref.material_dir
+    if context.scene.asset_manager.tabs == 'HDRI':
+        return pref.hdri_dir
+    elif context.scene.asset_manager.tabs == 'MATERIAL':
+        return pref.material_dir
     return pref.asset_dir
 
 def get_pref_switch(context=None):
@@ -337,14 +343,7 @@ def category_items(self, context):
             index += 1
 
     categories.insert(0, ('All', 'All', '', 0))
-
-    return categories
-
-
-# Update category list
-def update_category(self, context):
-    scan_directory(self, context)
-
+    return check_display_folder(categories)
 
 # Fill out sub categories.
 def subcategory_items(self, context):
@@ -354,15 +353,38 @@ def subcategory_items(self, context):
 
     if self.cat == 'All':
         return [('.', '.', '', 0)]
-
+    if self.tabs != 'OBJECT':
+        return [('0', '.', '', 0)]
     cat_path = os.path.join(root_dir, self.cat)
     for folder in sorted(os.listdir(cat_path)):
         path = os.path.join(cat_path, folder)
         if os.path.isdir(path) and not folder.startswith('.'):
             subcategories.append((folder, folder, '', index))
             index += 1
-
+    
     return subcategories
+
+def check_display_folder(categories):
+    split_hdri = bpy.context.preferences.addons[__name__].preferences.hdri_dir.split(os.sep)
+    hdri_folder_name = split_hdri[-2]
+    del split_hdri[-2]
+    split_material = bpy.context.preferences.addons[__name__].preferences.material_dir.split(os.sep)
+    material_folder_name = split_material[-2]
+    del split_material[-2]
+
+    path_hdri = os.sep.join(split_hdri)
+    path_material = os.sep.join(split_material)
+    names_to_remove = []
+    if path_hdri == bpy.context.preferences.addons[__name__].preferences.asset_dir or path_material == bpy.context.preferences.addons[__name__].preferences.asset_dir:
+        for folder in categories:
+            if folder[0] == material_folder_name or folder[0] == hdri_folder_name:
+                names_to_remove.append(folder)
+    for name in names_to_remove:
+        categories.remove(name)
+    return categories
+
+
+
 
 
 # PropertyGroup for this asset manager
@@ -391,17 +413,21 @@ class KrisAssetManager(bpy.types.PropertyGroup):
                ('MATERIAL', 'Material', 'Material tab', 'MATERIAL', 1),
                ('HDRI', 'Hdri', 'Hdri tab', 'WORLD_DATA', 2)], 
         name = 'Tabs', 
-        description = 'Selected tab')
+        description = 'Selected tab', 
+        update=reset_cat)
 
 
 
 # EnumProperty(asset_manager_prevs) Callback
 def scan_directory(self, context):
+    curr_tab = context.scene.asset_manager.tabs
     root_dir = get_root_dir(context)
-
     category = context.scene.asset_manager.cat
     subcategory = context.scene.asset_manager.subcat
-    directory = os.path.join(root_dir, category, subcategory)
+    if subcategory == '0':
+        directory = os.path.join(root_dir, category)
+    else:
+        directory = os.path.join(root_dir, category, subcategory)
 
     enum_items = []
     if context is None:
@@ -417,8 +443,12 @@ def scan_directory(self, context):
 
     print("Scanning directory: %s" % directory)
 
-    if category == 'All':
+    if category == 'All' and curr_tab == 'OBJECT':
         enum_items = scan_for_assets_root(root_dir, enum_items, pcoll)
+    elif category == 'All' and curr_tab == 'HDRI':
+        enum_items = scan_for_assets_subcategory(root_dir, enum_items, pcoll)
+    elif category == 'All' and curr_tab == 'MATERIAL':
+        enum_items = scan_for_assets_category(root_dir, enum_items, pcoll)
     elif subcategory == 'All':
         enum_items = scan_for_assets_category(os.path.join(root_dir, category), enum_items, pcoll)
     elif directory and os.path.exists(directory):
@@ -484,6 +514,7 @@ def scan_for_assets_subcategory(directory, enum_items, pcoll):
     if os.path.isdir(directory):
         for item in os.listdir(directory):
             item_path = os.path.join(directory, item)
+            
 
             # Handle loose .hdr file
             if is_hdr(item):
@@ -495,7 +526,6 @@ def scan_for_assets_subcategory(directory, enum_items, pcoll):
             if os.path.isdir(item_path):
                 # The item is a folder that contains either a blend file or an HDRI file
                 file_blend = find_blend_in_path(item_path)
-
                 # Find the preview and load it
                 for file in os.listdir(item_path):
                     if is_image(file):
@@ -544,6 +574,7 @@ def scan_for_assets_root(root, enum_items, pcoll):
     return enum_items
 
 
+
 # Import button
 class KAM_ImportObjectButton(bpy.types.Operator):
     bl_idname = "asset_manager.import_object"
@@ -581,7 +612,6 @@ class KAM_ImportHDR(bpy.types.Operator):
         return {'FINISHED'}
 
 
-# Import button
 class KAM_LinkToButton(bpy.types.Operator):
     bl_idname = "asset_manager.link_to"
     bl_label = "Go to iMeshh"
@@ -603,7 +633,6 @@ def get_data_colls():
         return bpy.data.collections
     elif hasattr(bpy.data, "groups"):
         return bpy.data.groups
-
 
 # Get the selected file (either a blend or an HDR)
 def get_selected_file(context):
@@ -651,8 +680,6 @@ def import_object(context, link):
     if blend:
         append_blend(blend, link)
 
-        # context.view_layer.active_layer_collection = active_layer
-
 def create_instance_collection(collection, parent_collection):
     empty = bpy.data.objects.new(name = collection.name, object_data = None)
     empty.instance_collection = collection
@@ -686,7 +713,6 @@ def select_coll_to_import(collection_names):
     #there is collection but no match, import all
     else:
         return collection_names
-        
 
 def link_collections(blend_file, parent_col):
     """ Import collections of a blend file as instances collection if it's possible
@@ -719,7 +745,6 @@ def link_collections(blend_file, parent_col):
                 instance.name = parent_col.name
             select(instance)
 
-
 # Import blend file
 def append_blend(blend_file, link=False):
     coll_name = os.path.splitext(os.path.basename(blend_file))[0].title()
@@ -748,7 +773,6 @@ def append_blend(blend_file, link=False):
 
     bpy.ops.view3d.snap_selected_to_cursor(use_offset=True)
 
-
 # Import objects into current scene.
 def import_material(context, link):
     active_ob = context.active_object
@@ -770,7 +794,6 @@ def import_material(context, link):
             active_ob.data.materials.append(mat)
             select(active_ob)
 
-
 def import_hdr_cycles(context):
     hdr = get_selected_hdr(context)
 
@@ -782,8 +805,6 @@ def import_hdr_cycles(context):
     world.use_nodes = True
     node_tree = world.node_tree
 
-    # Start from a clean slate
-    #node_tree.nodes.clear()
     path_nodes_blend = os.path.join(os.path.dirname(__file__), 'hdrinodes.blend')
     
     if not 'OUTPUTNODE' in node_tree.nodes:
@@ -842,15 +863,6 @@ def import_hdr_cycles(context):
     hdr_image = bpy.data.images.load(hdr)
     node_env_tex.image = hdr_image
 
-
-def update_hdri_strength_cycles(node, strength):
-    node.inputs['Strength'].default_value = strength
-
-
-def update_hdri_rotation_cycles(node, rotation):
-    node.rotation.z = rotation
-
-
 def import_hdr_corona(context):
     hdr = get_selected_hdr(context)
 
@@ -863,7 +875,6 @@ def import_hdr_corona(context):
 
 def update_hdri_strength_corona(corona, strength):
     corona.map_gi.intensity = strength
-
 
 def update_hdri_rotation_corona(corona, rotation):
     corona.latlong_enviro_rotate = rotation
@@ -889,6 +900,9 @@ classes = (
 def select_tab(self, context):
     if get_selected_hdr(context):
         context.scene.asset_manager.tabs = 'HDRI'
+    
+
+
 # Register classes and ...
 def register():
     # Initialize addon updater

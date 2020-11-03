@@ -12,7 +12,7 @@ from . import addon_updater_ops
 
 bl_info = {
     "name": "iMeshh Asset Manager",
-    "version": (0, 2, 91),
+    "version": (0, 2, 82),
     "blender": (2, 90, 1),
     "location": "View3D > TOOLS > iMeshh",
     "author": "iMeshh",
@@ -73,6 +73,19 @@ class KAM_PrefPanel(bpy.types.AddonPreferences):
         description="Show only hotkeys that have this text in their name",
         subtype="DIR_PATH")
     
+    # material_dir : StringProperty(
+    #     name="Material Path",
+    #     default=os.path.join(os.path.dirname(__file__), 'Assets'),
+    #     description="Show only hotkeys that have this text in their name",
+    #     subtype="DIR_PATH")
+    
+    # hdri_dir : StringProperty(
+    #     name="HDRI Path",
+    #     default=os.path.join(os.path.dirname(__file__), 'Assets'),
+    #     description="Show only hotkeys that have this text in their name",
+    #     subtype="DIR_PATH")
+    
+
     switch_corona : BoolProperty(
         name="Enable Corona/Blender switch",
         default=False,
@@ -116,6 +129,8 @@ class KAM_PrefPanel(bpy.types.AddonPreferences):
         layout = self.layout
         row = layout.row()
         row.prop(self, "asset_dir", text='Assets path')
+        # row.prop(self, "material_dir", text='Materials path')
+        # row.prop(self, "hdri_dir", text='HDRI path')
         row.operator("asset_manager.make_folder", icon="PROP_CON")
         row = layout.row()
         row.prop(self, "switch_corona")
@@ -129,8 +144,15 @@ class KAM_MakeFolder(bpy.types.Operator):
     bl_description = 'Make Assets folder'
 
     def execute(self, context):
+        #hdri_dir = context.preferences.addons[__name__].preferences.hdri_dir
+        #material_dir = context.preferences.addons[__name__].preferences.material_dir
         root = get_root_dir(context)
         make_folders(root)
+        # if hdri_dir == root:
+        #     hdri_dir = os.path.join(hdri_dir, 'HDRI')
+        # if material_dir == root:
+        #     meterial_dir = os.path.join(hdri_dir, 'Materials')
+
         return {'FINISHED'}
 
 
@@ -170,17 +192,6 @@ class KAM_Panel(bpy.types.Panel):
         KAM_UI(self, context)
 
 
-# Operator for popup dialog in panel
-class KAM_Popup(bpy.types.Operator):
-    """Acces to your Objects Library"""
-    bl_idname = "view3d.kris_asset"
-    bl_label = "iMeshh Asset Manager"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    def execute(self, context):
-        return {'FINISHED'}
-
-
 class KAM_OpenThumbnail(bpy.types.Operator):
     """Open the thumbnail image"""
     bl_idname = "asset_manager.open_thumbnail"
@@ -189,7 +200,7 @@ class KAM_OpenThumbnail(bpy.types.Operator):
 
     def execute(self, context):
         selected_blend = context.window_manager.asset_manager_prevs
-
+        
         for (blend_path, _, file_blend, icon_id, _) in preview_collections['main'].asset_manager_prevs:
             print(blend_path, file_blend, icon_id)
             if blend_path == selected_blend:
@@ -207,6 +218,15 @@ def open_blend(binary, filepath):
     else:
         subprocess.Popen([binary, filepath])
 
+def enum_members_from_type(rna_type, property):
+    prop = rna_type.bl_rna.properties[property]
+    return [e.identifier for e in prop.enum_items]
+
+def enum_members_from_instance(data, property):
+    """get all available entries for an enum property
+    - data : (AnyType) data from wich tot ake property
+    - property : (string) Edientifier property in data"""
+    return enum_members_from_type(type(data), property)
 
 class KAM_OpenBlend(bpy.types.Operator):
     """Open the .blend file for the asset"""
@@ -224,7 +244,6 @@ class KAM_OpenBlend(bpy.types.Operator):
         open_blend(bpy.app.binary_path, selected_blend)
         return {'FINISHED'}
 
-
 # Draw the dialog
 def KAM_UI(self, context):
     layout = self.layout
@@ -233,12 +252,17 @@ def KAM_UI(self, context):
 
     row = layout.row()
     row.operator("asset_manager.link_to", icon='MESH_UVSPHERE')
+    #TABS
+    col = layout.column()
+    row = col.split()
+    for item in enum_members_from_instance(manager, 'tabs'):
+        row.prop_enum(manager, 'tabs', value=item, text= '')
 
     # Categories Drop Down Menu
     col = layout.column()
     col.prop(manager, "cat")
     col.prop(manager, "subcat")
-
+    
     # Thumbnail view
     if len(wm.asset_manager_prevs) != 0:
         row = layout.row()
@@ -247,26 +271,11 @@ def KAM_UI(self, context):
         row = layout.row(align=True)
         row.operator("asset_manager.open_thumbnail", icon="FILE_IMAGE")
         row.operator("asset_manager.open_blend", icon="FILE_BLEND")
-
-        #row = layout.row()
-        #row.prop(manager, "blend", expand=True)
-
-        if get_selected_blend(context):
-            row = layout.column()
-            spl = row.split()
-            spl.operator("asset_manager.import_object", icon='APPEND_BLEND').link = False
-            spl.operator("asset_manager.import_object", icon='LINK_BLEND', text='Link Object').link = True
-
-            row = layout.row()
-            row.operator("asset_manager.import_material", icon='TEXTURE_DATA')
-        elif get_selected_hdr(context):
+        #HDRI tab
+        if context.scene.asset_manager.tabs == 'HDRI' or get_selected_hdr(context):
             row = layout.row()
             row.operator("asset_manager.import_hdr", icon='TEXTURE_DATA')
-
             row = layout.row()
-            #row.prop(manager, "hdr_strength")
-
-            #row.prop(manager, "hdr_rotation")
             if context.scene.world.node_tree and 'GROUND_PROJECTION' in context.scene.world.node_tree.nodes:
                 col = layout.column(heading ='Ground projection')
                 for inp in context.scene.world.node_tree.nodes['GROUND_PROJECTION'].inputs:
@@ -276,6 +285,16 @@ def KAM_UI(self, context):
                 for inp in context.scene.world.node_tree.nodes['HDRI_GROUP'].inputs:
                     if inp.name != 'HDRI':
                         col.prop(inp, 'default_value', text=inp.name)
+        #OBJECT tab
+        elif context.scene.asset_manager.tabs == 'OBJECT':
+            row = layout.column()
+            spl = row.split()
+            spl.operator("asset_manager.import_object", icon='APPEND_BLEND').link = False
+            spl.operator("asset_manager.import_object", icon='LINK_BLEND', text='Link Object').link = True
+        #MATERIAL tab
+        elif context.scene.asset_manager.tabs == 'MATERIAL':
+            row = layout.row()
+            row.operator("asset_manager.import_material", icon='TEXTURE_DATA')
 
 
 # Get root directory from user preferences
@@ -287,7 +306,11 @@ def get_root_dir(context=None):
         pref = context.preferences.addons[__name__].preferences
     else:
         pref = context.user_preferences.addons[__name__].preferences
-
+    
+    # if context.scene.asset_manager.tabs == 'HDRI':
+    #     return pref.hdri_dir
+    # elif context.scene.asset_manager.tabs == 'MATERIAL':
+    #     return pref.material_dir
     return pref.asset_dir
 
 def get_pref_switch(context=None):
@@ -342,30 +365,6 @@ def subcategory_items(self, context):
     return subcategories
 
 
-def hdr_strength_update(self, context):
-    manager = context.scene.asset_manager
-
-    if manager.blend == 'cycles':
-        for node in context.scene.world.node_tree.nodes:
-            if node.get(HDRI_NODE_TAG) and node.bl_idname == "ShaderNodeBackground":
-                update_hdri_strength_cycles(node, self.hdr_strength)
-    else:
-        corona = context.scene.world.corona
-        update_hdri_strength_corona(corona, self.hdr_strength)
-
-
-def hdr_rotation_update(self, context):
-    manager = context.scene.asset_manager
-
-    if manager.blend == 'cycles':
-        for node in context.scene.world.node_tree.nodes:
-            if node.get(HDRI_NODE_TAG) and node.bl_idname == "ShaderNodeMapping":
-                update_hdri_rotation_cycles(node, self.hdr_rotation)
-    else:
-        corona = context.scene.world.corona
-        update_hdri_rotation_corona(corona, self.hdr_rotation)
-
-
 # PropertyGroup for this asset manager
 class KrisAssetManager(bpy.types.PropertyGroup):
     cat : EnumProperty(
@@ -385,23 +384,15 @@ class KrisAssetManager(bpy.types.PropertyGroup):
         name="Blend",
         description="Select blend")
 
-    # HDR properties
-    hdr_strength : FloatProperty(
-        default=1,
-        soft_max=1,
-        soft_min=0,
-        name="Sky Strength",
-        description="The strength of the HDR environment",
-        update=hdr_strength_update
-    )
+    #Tabs
+    tabs : EnumProperty(
+        #(identifier, name, description, icon, number)
+        items=[('OBJECT', 'Object', 'Object tab', 'MESH_MONKEY', 0),
+               ('MATERIAL', 'Material', 'Material tab', 'MATERIAL', 1),
+               ('HDRI', 'Hdri', 'Hdri tab', 'WORLD_DATA', 2)], 
+        name = 'Tabs', 
+        description = 'Selected tab')
 
-    hdr_rotation : FloatProperty(
-        default=0,
-        subtype="ANGLE",
-        name="Environment Angle",
-        description="Rotate the HDR environment to this angle",
-        update=hdr_rotation_update
-    )
 
 
 # EnumProperty(asset_manager_prevs) Callback
@@ -418,6 +409,7 @@ def scan_directory(self, context):
 
     # Get the Preview Collection (defined in register func)
     pcoll = preview_collections["main"]
+
 
     # Skip if scanned already
     if directory == pcoll.asset_manager_prev_dir:
@@ -573,7 +565,6 @@ class KAM_ImportMaterialButton(bpy.types.Operator):
     def execute(self, context):
         import_material(context, link=False)
         return {'FINISHED'}
-
 
 # Import button
 class KAM_ImportHDR(bpy.types.Operator):
@@ -867,14 +858,8 @@ def import_hdr_corona(context):
         return
 
     corona = context.scene.world.corona
-    manager = context.scene.asset_manager
-
     corona.mode = 'latlong'
     corona.enviro_tex = hdr
-
-    update_hdri_strength_corona(corona, manager.hdr_strength)
-    update_hdri_rotation_corona(corona, manager.hdr_rotation)
-
 
 def update_hdri_strength_corona(corona, strength):
     corona.map_gi.intensity = strength
@@ -892,7 +877,6 @@ classes = (
     KAM_SettingsPanel,
     KAM_MakeFolder,
     KAM_Panel,
-    KAM_Popup,
     KAM_OpenBlend,
     KAM_OpenThumbnail,
     KAM_ImportHDR,
@@ -902,7 +886,9 @@ classes = (
     KrisAssetManager,
 )
 
-
+def select_tab(self, context):
+    if get_selected_hdr(context):
+        context.scene.asset_manager.tabs = 'HDRI'
 # Register classes and ...
 def register():
     # Initialize addon updater
@@ -932,7 +918,7 @@ def register():
         description="This addon, by default, will just import the scene collection. This will then auto-rename the scene collection to the assets file name. This will make it easier to find in the library")
 
 
-    WindowManager.asset_manager_prevs = EnumProperty(items=scan_directory)
+    WindowManager.asset_manager_prevs = EnumProperty(items=scan_directory, update=select_tab)
 
     pcoll = bpy.utils.previews.new()
     pcoll.asset_manager_prev_dir = ""

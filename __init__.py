@@ -446,7 +446,7 @@ def scan_directory(self, context):
     if category == 'All' and curr_tab == 'OBJECT':
         enum_items = scan_for_assets_root(root_dir, enum_items, pcoll)
     elif category == 'All' and curr_tab == 'HDRI':
-        enum_items = scan_for_assets_subcategory(root_dir, enum_items, pcoll)
+        enum_items = scan_for_assets_category(root_dir, enum_items, pcoll)
     elif category == 'All' and curr_tab == 'MATERIAL':
         enum_items = scan_for_assets_category(root_dir, enum_items, pcoll)
     elif subcategory == 'All':

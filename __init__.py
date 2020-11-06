@@ -266,8 +266,7 @@ def KAM_UI(self, context):
     # Categories Drop Down Menu
     col = layout.column()
     col.prop(manager, "cat")
-    if manager.subcat:
-        col.prop(manager, "subcat")
+    col.prop(manager, "subcat")
     
     # Thumbnail view
     if len(wm.asset_manager_prevs) != 0:
@@ -291,16 +290,20 @@ def KAM_UI(self, context):
                 for inp in context.scene.world.node_tree.nodes['HDRI_GROUP'].inputs:
                     if inp.name != 'HDRI':
                         col.prop(inp, 'default_value', text=inp.name)
+        #MATERIAL tab
+        elif context.scene.asset_manager.tabs == 'MATERIAL':
+            row = layout.row()
+            row.operator("asset_manager.import_material", icon='TEXTURE_DATA')
         #OBJECT tab
         elif context.scene.asset_manager.tabs == 'OBJECT':
             row = layout.column()
             spl = row.split()
             spl.operator("asset_manager.import_object", icon='APPEND_BLEND').link = False
             spl.operator("asset_manager.import_object", icon='LINK_BLEND', text='Link Object').link = True
-        #MATERIAL tab
-        elif context.scene.asset_manager.tabs == 'MATERIAL':
+            # selected can be a material but we don't know it
             row = layout.row()
             row.operator("asset_manager.import_material", icon='TEXTURE_DATA')
+        
 
 
 # Get root directory from user preferences
@@ -364,6 +367,10 @@ def subcategory_items(self, context):
     
     return subcategories
 
+def subcat_items_none(self, context):
+    subcategory_items(self, context)
+    return None
+
 def check_display_folder(categories):
     split_hdri = bpy.context.preferences.addons[__name__].preferences.hdri_dir.split(os.sep)
     hdri_folder_name = split_hdri[-2]
@@ -393,7 +400,7 @@ class KrisAssetManager(bpy.types.PropertyGroup):
         items=category_items,
         name="Category",
         description="Select a Category",
-        update=subcategory_items)
+        update=subcat_items_none)
 
     subcat : EnumProperty(
         items=subcategory_items,
@@ -445,9 +452,7 @@ def scan_directory(self, context):
 
     if category == 'All' and curr_tab == 'OBJECT':
         enum_items = scan_for_assets_root(root_dir, enum_items, pcoll)
-    elif category == 'All' and curr_tab == 'HDRI':
-        enum_items = scan_for_assets_category(root_dir, enum_items, pcoll)
-    elif category == 'All' and curr_tab == 'MATERIAL':
+    elif category == 'All' and curr_tab == 'HDRI' or curr_tab == 'MATERIAL':
         enum_items = scan_for_assets_category(root_dir, enum_items, pcoll)
     elif subcategory == 'All':
         enum_items = scan_for_assets_category(os.path.join(root_dir, category), enum_items, pcoll)
@@ -898,8 +903,9 @@ classes = (
 )
 
 def select_tab(self, context):
-    if get_selected_hdr(context):
-        context.scene.asset_manager.tabs = 'HDRI'
+    pass
+    #if get_selected_hdr(context) and context.scene.asset_manager.tabs != 'HDRI':
+    #    context.scene.asset_manager.tabs = 'HDRI'
     
 
 

@@ -12,7 +12,7 @@ from . import addon_updater_ops
 
 bl_info = {
     "name": "iMeshh Asset Manager",
-    "version": (0, 2, 95),
+    "version": (0, 2, 96),
     "blender": (2, 90, 1),
     "location": "View3D > TOOLS > iMeshh",
     "author": "iMeshh",
@@ -141,7 +141,7 @@ class KAM_PrefPanel(bpy.types.AddonPreferences):
         subcol = split.column()
         subcol.label(text=' ')
         subcol = split.column()
-        subcol.label(text='Assets> Main Category>Sub Category>Product File> file.blend and thumbnail.jpg')
+        subcol.label(text='Assets> Main Category>Sub Category>Product Folder> file.blend and thumbnail.jpg')
         split = col.split(factor=0.1)
         subcol = split.column()
         subcol.label(text=' ')
@@ -152,7 +152,7 @@ class KAM_PrefPanel(bpy.types.AddonPreferences):
         subcol = split.column()
         subcol.label(text=' ')
         subcol = split.column()
-        subcol.label(text='Materials> Material Category>Material file>Material.blend and thumbnail.jpg')
+        subcol.label(text='Materials> Material Category>Material folder>Material.blend and thumbnail.jpg')
         subcol.label(text='-NOTE no subcategories yet')
         split = col.split(factor=0.1)
         subcol = split.column()

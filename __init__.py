@@ -200,12 +200,12 @@ class KAM_MakeFolder(bpy.types.Operator):
     def execute(self, context):
         hdri_dir = context.preferences.addons[__name__].preferences.hdri_dir
         material_dir = context.preferences.addons[__name__].preferences.material_dir
-        root = get_root_dir(context)
+        root = get_root_dir(context, true_root=True)
         make_folders(root)
-        if hdri_dir == root:
-            hdri_dir = os.path.join(root, 'HDRI')
-        if material_dir == root:
-            material_dir = os.path.join(root, 'Materials')
+        if hdri_dir == root or hdri_dir == '':
+            context.preferences.addons[__name__].preferences.hdri_dir = os.path.join(root, 'HDRI')
+        if material_dir == root or material_dir == '':
+            context.preferences.addons[__name__].preferences.material_dir = os.path.join(root, 'Materials')
 
         return {'FINISHED'}
 
@@ -356,7 +356,7 @@ def KAM_UI(self, context):
 
 
 # Get root directory from user preferences
-def get_root_dir(context=None):
+def get_root_dir(context=None, true_root=False):
     if not context:
         context = bpy.Context
 
@@ -365,6 +365,8 @@ def get_root_dir(context=None):
     else:
         pref = context.user_preferences.addons[__name__].preferences
     
+    if true_root:
+        return pref.asset_dir
     if context.scene.asset_manager.tabs == 'HDRI':
         return pref.hdri_dir
     elif context.scene.asset_manager.tabs == 'MATERIAL':
@@ -386,15 +388,15 @@ def category_items(self, context):
     categories = []
     index = 1
     root_dir = get_root_dir(context)
-    # print('category')
-    for folder in sorted(os.listdir(root_dir)):
-        path = os.path.join(root_dir, folder)
+    if root_dir:
+        for folder in sorted(os.listdir(root_dir)):
+            path = os.path.join(root_dir, folder)
 
-        if os.path.isdir(path) and not folder.startswith('.'):
-            categories.append((folder, folder, '', index))
-            index += 1
+            if os.path.isdir(path) and not folder.startswith('.'):
+                categories.append((folder, folder, '', index))
+                index += 1
 
-    categories.insert(0, ('All', 'All', '', 0))
+        categories.insert(0, ('All', 'All', '', 0))
     return check_display_folder(categories)
 
 # Fill out sub categories.
@@ -421,20 +423,42 @@ def subcat_items_none(self, context):
     return None
 
 def check_display_folder(categories):
+    """
+    Remove HDRI and Materials from displayed categories if their folder is inside the main asset folder
+    """
+    hdri_is_inside = False
+    material_is_inside = False
+    
     split_hdri = bpy.context.preferences.addons[__name__].preferences.hdri_dir.split(os.sep)
-    hdri_folder_name = split_hdri[-2]
-    del split_hdri[-2]
+    if '' in split_hdri:
+        split_hdri.remove('')
+    if len(split_hdri) < 2:
+        return categories
+    hdri_folder_name = split_hdri[-1]
+    del split_hdri[-1]
     split_material = bpy.context.preferences.addons[__name__].preferences.material_dir.split(os.sep)
-    material_folder_name = split_material[-2]
-    del split_material[-2]
+    if '' in split_material:
+        split_material.remove('')
+    if len(split_material) < 2:
+        return categories
+    material_folder_name = split_material[-1]
+    del split_material[-1]
 
     path_hdri = os.sep.join(split_hdri)
     path_material = os.sep.join(split_material)
     names_to_remove = []
-    if path_hdri == bpy.context.preferences.addons[__name__].preferences.asset_dir or path_material == bpy.context.preferences.addons[__name__].preferences.asset_dir:
+    if path_hdri.replace(os.sep, '') == bpy.context.preferences.addons[__name__].preferences.asset_dir.replace(os.sep, ''):
+        hdri_is_inside = True
+    if path_material.replace(os.sep, '') == bpy.context.preferences.addons[__name__].preferences.asset_dir.replace(os.sep, ''):
+        material_is_inside = True
+
+    if hdri_is_inside or material_is_inside:
         for folder in categories:
-            if folder[0] == material_folder_name or folder[0] == hdri_folder_name:
+            if material_is_inside and folder[0] == material_folder_name:
                 names_to_remove.append(folder)
+            if hdri_is_inside and folder[0] == hdri_folder_name:
+                names_to_remove.append(folder)
+
     for name in names_to_remove:
         categories.remove(name)
     return categories

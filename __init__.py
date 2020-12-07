@@ -12,7 +12,7 @@ from . import addon_updater_ops
 
 bl_info = {
     "name": "iMeshh Asset Manager",
-    "version": (0, 2, 97),
+    "version": (0, 2, 98),
     "blender": (2, 90, 1),
     "location": "View3D > TOOLS > iMeshh",
     "author": "iMeshh",
@@ -522,15 +522,17 @@ def scan_directory(self, context):
         return pcoll.asset_manager_prevs
 
     print("Scanning directory: %s" % directory)
-
     if category == 'All' and curr_tab == 'OBJECT':
         enum_items = scan_for_assets_root(root_dir, enum_items, pcoll)
-    elif category == 'All' and curr_tab == 'HDRI' or curr_tab == 'MATERIAL':
+    elif category == 'All' and curr_tab == 'HDRI' :
+        enum_items = scan_for_assets_category(root_dir, enum_items, pcoll)
+    elif category == 'All' and curr_tab == 'MATERIAL':
         enum_items = scan_for_assets_category(root_dir, enum_items, pcoll)
     elif subcategory == 'All':
         enum_items = scan_for_assets_category(os.path.join(root_dir, category), enum_items, pcoll)
     elif directory and os.path.exists(directory):
         enum_items = scan_for_assets_subcategory(directory, enum_items, pcoll)
+
 
     # Return validation
     empty_path = os.path.join(os.path.dirname(root_dir), "empty.png")
